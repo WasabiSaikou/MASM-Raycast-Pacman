@@ -73,6 +73,7 @@ dCase:
     je up
     ret
 
+;----------------------------------
 up:
     mov eax, playerY
     cmp eax, 1
@@ -83,7 +84,6 @@ up:
 right:
     mov eax, playerX
     mov ecx, N
-    sub ecx, 1
     cmp eax, ecx
     jge pos_end
     inc playerX
@@ -92,7 +92,6 @@ right:
 down:
     mov eax, playerY
     mov ecx, N
-    sub ecx, 1
     cmp eax, ecx
     jge pos_end
     inc playerY
