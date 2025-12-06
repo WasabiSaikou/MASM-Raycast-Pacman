@@ -7,8 +7,8 @@ PUBLIC N
 PUBLIC MazeSize
 
 .data
-N EQU 32               ; Maze side length 32
-MazeSize EQU N * N     ; Total number of units: 1024
+N DWORD 32               ; Maze side length 32
+MazeSize DWORD N * N     ; Total number of units: 1024
 
 ; Define maze structure array (each element is 1 BYTE)
 ; 1 : wall ; 2 : path with dots ; 0 : path without dots
@@ -48,4 +48,5 @@ MazeMap BYTE 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 .code
 
 END
+
 
