@@ -2,7 +2,6 @@ TITLE maze
 
 INCLUDE Irvine32.inc
 
-PUBLIC maze
 PUBLIC MazeMap
 PUBLIC N
 PUBLIC MazeSize
@@ -49,3 +48,4 @@ MazeMap BYTE 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 .code
 
 END
+
