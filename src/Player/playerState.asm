@@ -7,8 +7,8 @@ PUBLIC playerX, playerY, dir, inputCode
 EXTERN N:DWORD
 
 .data
-    playerX   DWORD 3
-    playerY   DWORD 3
+    playerX   DWORD 16
+    playerY   DWORD 15
     dir       DWORD 1        ; 0=↑,1=→,2=↓,3=←
     inputCode DWORD 0        ; 0=none, 1~7
 
@@ -26,3 +26,4 @@ PlayerState PROC
 PlayerState ENDP
 
 END
+
