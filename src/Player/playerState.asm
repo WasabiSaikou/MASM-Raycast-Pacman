@@ -6,8 +6,8 @@ PUBLIC playerX, playerY, dir, inputCode
 PUBLIC mapWidth, mapHeight
 
 .data
-    mapWidth  DWORD 7
-    mapHeight DWORD 7
+    mapWidth  DWORD 32
+    mapHeight DWORD 32
 
     playerX   DWORD 3
     playerY   DWORD 3
@@ -28,3 +28,4 @@ PlayerState PROC
 PlayerState ENDP
 
 END
+
