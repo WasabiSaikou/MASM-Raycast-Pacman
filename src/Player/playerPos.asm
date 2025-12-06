@@ -4,7 +4,7 @@ INCLUDE Irvine32.inc
 
 EXTERN inputCode:DWORD
 EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD
-EXTERN mapWidth:DWORD, mapHeight:DWORD
+EXTERN N:DWORD
 
 PUBLIC PlayerPos
 
@@ -82,7 +82,7 @@ up:
 
 right:
     mov eax, playerX
-    mov ecx, mapWidth
+    mov ecx, N
     sub ecx, 1
     cmp eax, ecx
     jge pos_end
@@ -91,7 +91,7 @@ right:
 
 down:
     mov eax, playerY
-    mov ecx, mapHeight
+    mov ecx, N
     sub ecx, 1
     cmp eax, ecx
     jge pos_end
@@ -110,4 +110,3 @@ pos_end:
 
 PlayerPos ENDP
 END
-
