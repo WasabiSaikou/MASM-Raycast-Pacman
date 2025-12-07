@@ -1,73 +1,84 @@
 TITLE Main
-.386
-.MODEL FLAT, C
+
+INCLUDE Irvine32.inc
 
 main          EQU start@0
 
-EXTERN collision:PROC              ; 迷宮與邏輯
+GetTickCount PROTO   ; Windows API: The number of milliseconds since the system started sending data back
+
+InputModule PROTO
+PlayerPos PROTO
+PlayerRotate PROTO
+PlayerReset PROTO
+
+AIdataStructure PROTO
+pathFinding PROTO
+ghostBehavior PROTO
+ghostPos PROTO
+
+collision PROTO
+gameState PROTO
+maze PROTO
+
+EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD, inputCode:DWORD
+EXTERN ghostX:DWORD, ghostY:DWORD
+
 
 .data
-    
-    gameState GameState <>         ; 遊戲狀態結構（玩家、鬼、迷宮、記分）
+tickMs   DWORD 16    ; length of each tick: 16ms → approximately 60 ticks/second
+lastTick DWORD 0     ; Last update time
+nowTime  DWORD 0     ; now time
+elapsed  DWORD 0     ; Difference from the last update
 
 .code
+main PROC
 
-mian PROC
+    ; Initialize lastTick
+    call GetTickCount
+    mov lastTick, eax
 
-    ; 初始化視窗與 OpenGL（呼叫 C 函式）
-    call InitWindow
-    call InitOpenGL
+main_loop:
+; --------------------------------------
+;       Determine time interval
+; --------------------------------------
+    ; get nowTime
+    call GetTickCount
+    mov nowTime, eax
+    
+    ; calculate elapsed = nowTime - lastTick
+    mov eax, nowTime
+    sub eax, lastTick
+    mov elapsed, eax
 
-    ; 初始化迷宮、點點、玩家、鬼怪
-    lea eax, gameState
-    push eax
-    call InitGameState
+    ; if elapsed < tickMs → continue waiting
+    mov eax, elapsed
+    cmp eax, tickMs
+    jb main_loop
 
-GameLoop:
+    ; update lastTick
+    mov eax, lastTick
+    add eax, tickMs
+    mov lastTick, eax
 
-    ; 處理鍵盤輸入
-    push OFFSET gameState
-    call ProcessInput            ; WASD、旋轉左右鍵等
+; --------------------------------------
+;       An update of a tick begins
+; --------------------------------------
+    ; player
+    call InputModule 
+    call PlayerRotate
+    call PlayerPos 
 
-    ; 更新玩家位置 / 旋轉
-    push OFFSET gameState
-    call UpdatePlayer
+    ; ghost
+    call AIdataStructure
+    call ghostBehavior
 
-    ; 更新鬼怪 AI（A*）
-    push OFFSET gameState
-    call UpdateGhostAI
+    ; logic
+    call Collision
+    call GameState
+    
+    ; interface
 
-    ; 碰撞檢查（牆、鬼、點點）
-    push OFFSET gameState
-    call CheckCollision          ; 牆和鬼怪的判定
-
-    ; 是否結束？
-    mov eax, gameState.isGameOver
-    cmp eax, 1
-    je GameOver
-
-    ; 渲染畫面（Raycasting）
-    push OFFSET gameState
-    call RenderFrame             ; Person1：raycaster
-
-    ; 更新視窗（C 端刷新 buffer）
-    call SwapBuffers
-
-    jmp GameLoop                 ; 回到迴圈
-
-GameOver:
-    ; Render 結束畫面（你們想畫文字也可以）
-    call RenderEndScreen
-
-    ; 等待使用者按 Enter 或 R 重開
-    call WaitForRestartKey
-
-    ; 重新初始化
-    lea eax, gameState
-    push eax
-    call InitGameState
-
-    jmp GameLoop
-
+    jmp main_loop
+    
 main ENDP
 END main
