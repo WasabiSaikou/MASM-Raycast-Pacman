@@ -1,9 +1,63 @@
-TITLE Collision
-.386
-.MODEL FLAT, C
+TITLE collision
+
+INCLUDE Irvine32.inc
 
 PUBLIC collision
 
+EXTERN playerX:DWORD, playerY:DWORD, point:DWORD
+EXTERN prevX:DWORD, prevY:DWORD                  ; save last position of player
+EXTERN ghostX:DWORD, ghostY:DWORD
+EXTERN MazeMap:BYTE, N:DWORD
+
+EXTERN gameState:PROC
 
 
+.code
+collision PROC 
 
+    ; calculate index = N * (playerY - 1) + (playerX - 1)
+    mov eax, playerY
+    dec eax
+    imul eax, N
+    mov edx, playerX
+    dec edx
+    add eax, edx                   ; eax = index
+    mov ebx, OFFSET MazeMap
+    movzx ecx, BYTE PTR [ebx+eax]  ; ecx = MazeMap[index]
+    
+    cmp ecx, 1
+    jne notHitWall
+
+    ; Hitting the wall → Go back to the previous step
+    mov eax, prevX
+    mov playerX, eax
+    mov eax, prevY
+    mov playerY, eax
+    jmp checkGhost
+
+notHitWall:
+    cmp ecx, 2
+    jne checkGhost
+
+    mov edx, point
+    add edx, 1
+    mov point, edx
+    mov BYTE PTR [ebx+eax], 0
+
+checkGhost:
+    ; Judgment of ghost collision
+    mov eax, playerX
+    cmp eax, ghostX
+    jne noCollision
+    mov eax, playerY
+    cmp eax, ghostY
+    jne noCollision
+
+    ; hit the ghost → handle GameOver
+    call gameState
+
+noCollision:
+    ret
+
+collision ENDP
+END
