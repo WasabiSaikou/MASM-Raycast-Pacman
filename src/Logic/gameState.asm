@@ -1,4 +1,5 @@
 TITLE gameState
+
 INCLUDE Irvine32.inc
 
 PUBLIC point, gameOverFlag, gameWinFlag
@@ -72,3 +73,4 @@ continueGame:
 
 gameState ENDP
 END
+
