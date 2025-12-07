@@ -5,12 +5,12 @@ INCLUDE Irvine32.inc
 PUBLIC collision
 
 EXTERN playerX:DWORD, playerY:DWORD, point:DWORD
-EXTERN prevX:DWORD, prevY:DWORD                  ; save last position of player
+EXTERN prevX:DWORD, prevY:DWORD
 EXTERN ghostX:DWORD, ghostY:DWORD
 EXTERN MazeMap:BYTE, N:DWORD
+EXTERN gameOverFlag:DWORD, gameWinFlag:DWORD
 
 EXTERN gameState:PROC
-
 
 .code
 collision PROC 
@@ -44,6 +44,13 @@ notHitWall:
     mov point, edx
     mov BYTE PTR [ebx+eax], 0
 
+    ; eat all dots → win the game
+    cmp edx, 361
+    jne checkGhost
+    mov ebx, 1
+    mov gameWinFlag, ebx
+    call gameState
+
 checkGhost:
     ; Judgment of ghost collision
     mov eax, playerX
@@ -53,7 +60,9 @@ checkGhost:
     cmp eax, ghostY
     jne noCollision
 
-    ; hit the ghost → handle GameOver
+    ; hit the ghost → game over
+    mov ebx, 1
+    mov gameOverFlag, ebx
     call gameState
 
 noCollision:
