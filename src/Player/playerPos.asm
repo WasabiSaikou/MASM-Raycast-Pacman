@@ -4,12 +4,18 @@ INCLUDE Irvine32.inc
 
 EXTERN moveState:DWORD
 EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD
+EXTERN prevX:DWORD, prevY:DWORD
 EXTERN N:DWORD
 
 PUBLIC PlayerPos
 
 .code
 PlayerPos PROC
+    mov eax, playerX
+    mov prevX, eax
+    mov eax, playerY
+    mov prevY, eax
+
     mov eax, moveState
     cmp eax, 1
     je wCase
