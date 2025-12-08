@@ -1,8 +1,16 @@
 TITLE PathFindIng
 
-INCLUDE AIdataStructure.asm
 INCLUDE Irvine32.inc
 
+EXTERN PATH_LENGTH:DWORD, CURRENT_PATH_STEP:DWORD
+EXTERN ghostX:DWORD, ghostY:DWORD, targetX:DWORD, targetY:DWORD
+EXTERN OPEN_LIST_COUNT:WORD
+EXTERN NODE_MAP:BYTE, GHOST_PATH:WORD 
+EXTERN GHOST_STATE:BYTE
+EXTERN N:DWORD, MazeMap:BYTE ; 來自 maze.asm
+EXTERN NODE_SIZE_BYTES:DWORD  ; 雖然是 EQU，但確保它被正確處理或改為 EXTERN
+
+PUBLIC PathFindIng
 PUBLIC Absolute_Value, Calculate_Manhattan_H, Get_Node_Offset
 PUBLIC Heap_Insert, Heap_Extract_Min, Reset_A_Star, A_Star_Search, Reconstruct_Path
 
