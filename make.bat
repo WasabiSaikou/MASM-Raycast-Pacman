@@ -55,9 +55,6 @@ if errorlevel 1 goto terminate
 ML /c /coff /Zi collision.asm  
 if errorlevel 1 goto terminate
 
-ML /c /coff /Zi render.asm  
-if errorlevel 1 goto terminate
-
 
 REM /debug              generate symbolic debugging information
 REM /subsystem:console  generate console application code
@@ -79,3 +76,4 @@ DIR Main.* playerPos.* playerReset.* playerRotate.* playerState.* pathFinding.* 
 :terminate
 pause
 endlocal
+
