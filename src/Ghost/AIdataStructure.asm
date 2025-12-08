@@ -23,6 +23,7 @@ PUBLIC NODE_MAP, OPEN_LIST_BUFFER, OPEN_LIST_COUNT
 PUBLIC GHOST_PATH, PATH_LENGTH, CURRENT_PATH_STEP
 PUBLIC ghostX, ghostY, targetX, targetY
 PUBLIC GHOST_STATE
+PUBLIC GHOST_SPEED_TICKS, GHOST_MOVE_COUNTER 
 
 .DATA 
 
@@ -46,7 +47,11 @@ CURRENT_PATH_STEP DW 0
 ghostX DWORD 27           
 ghostY DWORD 5           
 targetX DWORD 16          
-targetY DWORD 15          
+targetY DWORD 15        
+
+; --- 5. 幽靈速度與計數器，假設速度參數
+GHOST_SPEED_TICKS DW 4 ; 幽靈移動一格需要 4 遊戲幀
+GHOST_MOVE_COUNTER DW 0 ; 紀錄移動進度
 
 GHOST_STATE DB 0  
 
