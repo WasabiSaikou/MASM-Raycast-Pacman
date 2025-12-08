@@ -67,13 +67,12 @@ REM Kernel32.lib        library procedures to be invoked from the program
 REM irvine32.lib
 REM user32.lib
 
-LINK /INCREMENTAL:no /debug /subsystem:console /entry:start /out:Main.exe Main.obj playerPos.obj playerReset.obj playerRotate.obj playerState.obj pathFinding.obj AIdataStructure.obj ghostBehavior.obj gameState.obj maze.obj collision.obj Kernel32.lib irvine32.lib user32.lib
+LINK /INCREMENTAL:no /debug /subsystem:console /entry:start /out:Main.exe Main.obj InputModule.obj playerPos.obj playerReset.obj playerRotate.obj playerState.obj pathFinding.obj AIdataStructure.obj ghostBehavior.obj gameState.obj maze.obj collision.obj Kernel32.lib irvine32.lib user32.lib
 if errorlevel 1 goto terminate
 
 REM Display all files related to this program:
-DIR Main.* playerPos.* playerReset.* playerRotate.* playerState.* pathFinding.* AIdataStructure.* ghostBehavior.* gameState.* maze.* collision.* 
+DIR Main.* InputModule.* playerPos.* playerReset.* playerRotate.* playerState.* pathFinding.* AIdataStructure.* ghostBehavior.* gameState.* maze.* collision.* 
 
 :terminate
 pause
 endlocal
-
