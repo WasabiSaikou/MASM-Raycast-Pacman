@@ -5,11 +5,12 @@ INCLUDE Irvine32.inc
 PUBLIC point, gameOverFlag, gameWinFlag
 PUBLIC gameState
 
-EXTERN playerX:DWORD, playerY:DWORD
+EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD
 EXTERN prevX:DWORD, prevY:DWORD
 EXTERN ghostX:DWORD, ghostY:DWORD
 
 EXTERN resetMaze:PROC
+EXTERN PlayerReset:PROC
 
 .data
 point DWORD 0
@@ -35,7 +36,7 @@ Win:
     mov edx, OFFSET gameWinMsg
     call WriteString
     call Crlf
-    jmp delay
+    jmp timeInterval
 
 GameOver:
     ; 顯示 GameOver 訊息
@@ -43,7 +44,7 @@ GameOver:
     call WriteString
     call Crlf
 
-delay:
+timeInterval:
     ; 暫停 3 秒
     mov eax, 3000
     call Delay
@@ -54,12 +55,7 @@ resetGame:
     mov gameWinFlag, eax
     mov point, eax
 
-    mov eax, 16
-    mov playerX, eax
-    mov prevX, eax
-    mov eax, 15
-    mov playerY, eax
-    mov prevY, eax
+    call PlayerReset
     
     mov eax, 27
     mov ghostX, eax
@@ -73,4 +69,3 @@ continueGame:
 
 gameState ENDP
 END
-
