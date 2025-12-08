@@ -1,14 +1,15 @@
-INCLUDE AIdataStructure.asm
+TITLE ghostBehavior
 
-EXTRN A_Star_Search:NEAR
+EXTERN PATH_LENGTH:DWORD, CURRENT_PATH_STEP:DWORD
+EXTERN ghostX:DWORD, ghostY:DWORD
+EXTERN NODE_MAP:BYTE
+EXTERN NODE_SIZE_BYTES:DWORD 
+EXTERN GHOST_SPEED_TICKS:WORD, GHOST_MOVE_COUNTER:WORD ; 從 AIdataStructure 或專門檔案獲取
+EXTERN A_Star_Search:NEAR
 
+PUBLIC ghostBehavior
 PUBLIC Ghost_Main_Update
 PUBLIC Ghost_Follow_Path
-
-.DATA
-; 假設速度參數
-GHOST_SPEED_TICKS DW 4 ; 幽靈移動一格需要 4 遊戲幀
-GHOST_MOVE_COUNTER DW 0 ; 紀錄移動進度
 
 .CODE
 ; 幽靈的每幀更新函數 (由 Main Loop 呼叫)
