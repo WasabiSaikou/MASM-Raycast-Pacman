@@ -86,9 +86,15 @@ resetMaze PROC
     mov ecx, MazeSize        ; all elements that we need to initialize
     mov esi, OFFSET initialMaze
     mov edi, OFFSET MazeMap
-    cld
-    rep movsb                ; repeat move 1024(ecx) bytes
+    
+copyLoop:
+    mov al, [esi]
+    mov [edi], al
+    inc esi
+    inc edi
+    loop copyLoop
 
     ret
 resetMaze ENDP
+
 END
