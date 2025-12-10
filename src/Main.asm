@@ -9,11 +9,7 @@ GetTickCount PROTO   ; Windows API: The number of milliseconds since the system 
 InputModule PROTO
 PlayerPos PROTO
 PlayerRotate PROTO
-PlayerReset PROTO
 
-AIdataStructure PROTO
-pathFinding PROTO
-ghostBehavior PROTO
 ghostPos PROTO
 
 collision PROTO
@@ -69,12 +65,11 @@ main_loop:
     call PlayerPos 
 
     ; ghost
-    call AIdataStructure
-    call ghostBehavior
+    call ghostPos
 
     ; logic
     call Collision
-    call GameState
+    call gameState
     
     ; interface
 
