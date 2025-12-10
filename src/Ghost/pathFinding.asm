@@ -1,36 +1,21 @@
-TITLE pathFinding
-
-.MODEL FLAT, STDCALL
+TITLE PathFinding
 
 INCLUDE Irvine32.inc
-INCLUDE AIDataStruct.inc ; <--- 引入常數 (EQU)
+INCLUDE AIDataStruct.inc
 
-; =======================================================
-; 外部變數宣告 (EXTERN)
-; =======================================================
 EXTERN N:DWORD, MazeMap:BYTE
 EXTERN PATH_LENGTH:DWORD, CURRENT_PATH_STEP:DWORD
 EXTERN ghostX:DWORD, ghostY:DWORD, targetX:DWORD, targetY:DWORD
 EXTERN OPEN_LIST_COUNT:WORD
 EXTERN NODE_MAP:BYTE, GHOST_PATH:WORD 
-EXTERN OPEN_LIST_BUFFER:WORD ; <--- 修正: 必須宣告為 WORD 陣列
+EXTERN OPEN_LIST_BUFFER:WORD
 
-; =======================================================
-; 程序宣告
-; =======================================================
 PUBLIC Absolute_Value, Calculate_Manhattan_H, Get_Node_Offset
 PUBLIC Heap_Insert, Heap_Extract_Min, Reset_A_Star, A_Star_Search, Reconstruct_Path
 
 .CODE
 
-; -------------------------------------------------------
-; Check_Wall
-; -------------------------------------------------------
-Check_Wall PROC NEAR
-    PUSH EAX
-    PUSH EBX
-    PUSH EDX
-    PUSH ECX
+Check_Wall PROC NEAR USES EAX EBX ECX EDX
     
     DEC ECX
     DEC EDX
@@ -46,23 +31,15 @@ Check_Wall PROC NEAR
     JE Is_Wall
     
     CLC 
-    JMP Check_Wall_Done
+    RET
     
 Is_Wall:
     STC 
-
-Check_Wall_Done:
-    POP ECX
-    POP EDX
-    POP EBX
-    POP EAX
     RET
 Check_Wall ENDP
 
-; -------------------------------------------------------
-; Absolute_Value
-; -------------------------------------------------------
 Absolute_Value PROC NEAR
+    ; 這裡不需要 USES，因為 EAX 是回傳值，不能被恢復
     CMP EAX, 0
     JGE Abs_Done
     NEG EAX
@@ -70,14 +47,8 @@ Abs_Done:
     RET
 Absolute_Value ENDP
 
-; -------------------------------------------------------
-; Calculate_Manhattan_H
-; -------------------------------------------------------
-Calculate_Manhattan_H PROC NEAR
-    PUSH EBX
-    PUSH EDX
-    PUSH ESI
-    PUSH EDI
+Calculate_Manhattan_H PROC NEAR USES EBX ECX EDX ESI EDI
+    ; EAX 是回傳值，不在 USES 列表中
     
     MOV EAX, ECX
     SUB EAX, ESI
@@ -90,19 +61,10 @@ Calculate_Manhattan_H PROC NEAR
     
     ADD EAX, EBX
     
-    POP EDI
-    POP ESI
-    POP EDX
-    POP EBX
     RET
 Calculate_Manhattan_H ENDP
 
-; -------------------------------------------------------
-; Get_Node_Offset
-; -------------------------------------------------------
-Get_Node_Offset PROC NEAR
-    PUSH EBX
-    PUSH EDX
+Get_Node_Offset PROC NEAR USES EBX ECX EDX
     
     DEC ECX 
     DEC EDX
@@ -115,25 +77,16 @@ Get_Node_Offset PROC NEAR
     MOV EBX, NODE_SIZE_BYTES
     MUL EBX 
     
-    INC ECX
-    INC EDX
-
-    POP EDX
-    POP EBX
     RET
 Get_Node_Offset ENDP
 
-; -------------------------------------------------------
-; Compare_Nodes_F
-; -------------------------------------------------------
-Compare_Nodes_F PROC NEAR
-    PUSH ESI
-    PUSH EDI
-    PUSH EDX
+Compare_Nodes_F PROC NEAR USES EAX ECX EDX ESI EDI
     
     ; Index A -> Offset A
     MOV ESI, EAX
     MOV EDI, NODE_SIZE_BYTES
+    
+    ; 這裡內部的 PUSH EAX 是為了乘法運算保存 EAX，這必須保留
     PUSH EAX
     MOV EAX, ESI
     MUL EDI
@@ -141,13 +94,13 @@ Compare_Nodes_F PROC NEAR
     POP EAX 
     ADD ESI, NODE_F_COST
 
-    ; 讀取 F_A (16-bit 讀入 32-bit 暫存器)
+    ; 讀取 F_A
     MOV EDI, OFFSET NODE_MAP
-    MOVZX EDI, WORD PTR [EDI + ESI] ; <--- 修正: WORD PTR + MOVZX
+    MOVZX EDI, WORD PTR [EDI + ESI]
 
     ; Index B -> Offset B
     MOV EAX, EBX
-    PUSH EDX
+    PUSH EDX ; 這裡的 PUSH EDX 也是運算需要，保留
     MOV ESI, NODE_SIZE_BYTES
     MUL ESI 
     POP EDX
@@ -155,46 +108,27 @@ Compare_Nodes_F PROC NEAR
     
     ; 讀取 F_B
     MOV ESI, OFFSET NODE_MAP 
-    MOVZX ECX, WORD PTR [ESI + EAX] ; <--- 修正: WORD PTR + MOVZX
+    MOVZX ECX, WORD PTR [ESI + EAX]
 
     CMP EDI, ECX 
     
-    POP EDX
-    POP EDI
-    POP ESI
     RET
 Compare_Nodes_F ENDP
 
-; -------------------------------------------------------
-; Swap_Open_List_Elements
-; -------------------------------------------------------
-Swap_Open_List_Elements PROC NEAR
-    PUSH EAX
-    PUSH EBX
+Swap_Open_List_Elements PROC NEAR USES EAX EBX
 
-    ; OPEN_LIST_BUFFER 是 WORD 陣列，必須用 16-bit 暫存器 (AX/BX) 存取
     MOV AX, WORD PTR [OPEN_LIST_BUFFER + ESI*2] 
     MOV BX, WORD PTR [OPEN_LIST_BUFFER + EDI*2] 
     MOV WORD PTR [OPEN_LIST_BUFFER + ESI*2], BX 
     MOV WORD PTR [OPEN_LIST_BUFFER + EDI*2], AX 
 
-    POP EBX
-    POP EAX
     RET
 Swap_Open_List_Elements ENDP
 
-; -------------------------------------------------------
-; Heap_Insert
-; -------------------------------------------------------
-Heap_Insert PROC NEAR
-    PUSH EBX
-    PUSH ECX
-    PUSH EDX
-    PUSH ESI
-    PUSH EDI
+Heap_Insert PROC NEAR USES EAX EBX ECX EDX ESI EDI
     
-    MOVZX ECX, OPEN_LIST_COUNT ; <--- 修正: WORD to DWORD
-    MOV WORD PTR [OPEN_LIST_BUFFER + ECX*2], AX ; <--- 修正: AX 是 Index (16-bit)
+    MOVZX ECX, OPEN_LIST_COUNT 
+    MOV WORD PTR [OPEN_LIST_BUFFER + ECX*2], AX 
     INC OPEN_LIST_COUNT 
     
 Swim_Loop:
@@ -206,9 +140,12 @@ Swim_Loop:
     SHR EAX, 1
     MOV EBX, EAX 
     
-    MOVZX ESI, WORD PTR [OPEN_LIST_BUFFER + ECX*2] ; <--- 修正: 讀取 16-bit Index
-    MOVZX EDI, WORD PTR [OPEN_LIST_BUFFER + EBX*2] ; <--- 修正: 讀取 16-bit Index
+    MOVZX ESI, WORD PTR [OPEN_LIST_BUFFER + ECX*2] 
+    MOVZX EDI, WORD PTR [OPEN_LIST_BUFFER + EBX*2] 
     
+    ; 這裡必須保留 PUSH/POP ECX，因為 Compare_Nodes_F 可能會改動 ECX
+    ; 雖然 Compare_Nodes_F 現在也有 USES，但在呼叫過程中還是手動保護比較保險
+    ; 且此處邏輯是暫存變數保護
     PUSH ECX
     MOV EAX, ESI
     MOV EBX, EDI
@@ -217,6 +154,7 @@ Swim_Loop:
     
     JNC Insert_Done 
     
+    ; 這裡的 PUSH/POP 是為了 Swap 準備參數，必須保留
     PUSH EAX 
     PUSH EBX
 
@@ -231,33 +169,21 @@ Swim_Loop:
     JMP Swim_Loop
 
 Insert_Done:
-    POP EDI
-    POP ESI
-    POP EDX
-    POP ECX
-    POP EBX
     RET
 Heap_Insert ENDP
 
-; -------------------------------------------------------
-; Heap_Extract_Min
-; -------------------------------------------------------
-Heap_Extract_Min PROC NEAR
-    PUSH EBX
-    PUSH ECX
-    PUSH EDX
-    PUSH ESI
-    PUSH EDI
+Heap_Extract_Min PROC NEAR USES EBX ECX EDX ESI EDI
+    ; EAX 回傳值，不放入 USES
     
     CMP OPEN_LIST_COUNT, 0
     JE Extract_Empty
     
-    MOVZX EAX, WORD PTR [OPEN_LIST_BUFFER + 0] ; <--- 修正: WORD to DWORD
+    MOVZX EAX, WORD PTR [OPEN_LIST_BUFFER + 0] 
     
     DEC OPEN_LIST_COUNT
     MOVZX ECX, OPEN_LIST_COUNT
     MOVZX ESI, WORD PTR [OPEN_LIST_BUFFER + ECX*2] 
-    MOV WORD PTR [OPEN_LIST_BUFFER + 0], SI    ; <--- 修正: 寫入 16-bit
+    MOV WORD PTR [OPEN_LIST_BUFFER + 0], SI    
     
     MOV ECX, 0 
 Sink_Loop:
@@ -265,7 +191,7 @@ Sink_Loop:
     SHL EDX, 1
     INC EDX
     
-    MOVZX EBX, OPEN_LIST_COUNT ; <--- 修正: 比較前擴展 Count
+    MOVZX EBX, OPEN_LIST_COUNT 
     CMP EDX, EBX
     JGE Sink_Done 
 
@@ -321,21 +247,10 @@ Extract_Empty:
     MOV EAX, 0FFFFh
 
 Sink_Done:
-    POP EDI
-    POP ESI
-    POP EDX
-    POP ECX
-    POP EBX
     RET
 Heap_Extract_Min ENDP
 
-; -------------------------------------------------------
-; Reset_A_Star
-; -------------------------------------------------------
-Reset_A_Star PROC NEAR
-    PUSH EAX
-    PUSH ECX
-    PUSH ESI
+Reset_A_Star PROC NEAR USES EAX ECX ESI
     
     MOV OPEN_LIST_COUNT, 0
 
@@ -355,23 +270,10 @@ Reset_Loop:
     MOV PATH_LENGTH, 0
     MOV CURRENT_PATH_STEP, 0
 
-    POP ESI
-    POP ECX
-    POP EAX
     RET
 Reset_A_Star ENDP
 
-; -------------------------------------------------------
-; A_Star_Search
-; -------------------------------------------------------
-A_Star_Search PROC NEAR
-    PUSH EAX
-    PUSH EBX
-    PUSH ECX
-    PUSH EDX
-    PUSH ESI
-    PUSH EDI
-    PUSH EBP 
+A_Star_Search PROC NEAR USES EAX EBX ECX EDX ESI EDI EBP 
 
     CALL Reset_A_Star
     
@@ -394,10 +296,9 @@ A_Star_Search PROC NEAR
     MOV EDX, ghostY
     MOV ESI, targetX
     MOV EDI, targetY
-    CALL Calculate_Manhattan_H ; EAX = H (32-bit)
+    CALL Calculate_Manhattan_H 
     POP EDI
     
-    ; 修正: 將 32-bit EAX 轉為 16-bit 寫入
     MOV WORD PTR [NODE_MAP + EBP + NODE_G_COST], 0 
     MOV WORD PTR [NODE_MAP + EBP + NODE_H_COST], AX 
     MOV WORD PTR [NODE_MAP + EBP + NODE_F_COST], AX 
@@ -405,7 +306,7 @@ A_Star_Search PROC NEAR
     MOV EAX, EBP
     MOV EBX, NODE_SIZE_BYTES
     XOR EDX, EDX 
-    DIV EBX ; EAX = Start Node Index
+    DIV EBX 
     CALL Heap_Insert 
         
     MOV BYTE PTR [NODE_MAP + EBP + NODE_FLAG], 1 
@@ -414,19 +315,30 @@ Main_AStar_Loop:
     CMP OPEN_LIST_COUNT, 0
     JE No_Path_Found
 
-    CALL Heap_Extract_Min ; EAX = Current Index
+    CALL Heap_Extract_Min ; EAX = Current Index (0-based)
     
+    ; 計算 Offset
+    PUSH EAX
     MOV EBX, NODE_SIZE_BYTES
     MUL EBX 
     MOV ESI, EAX ; ESI = Current Offset
+    POP EAX      ; EAX = Index
     
     CMP ESI, EDI
     JE Path_Found
 
     MOV BYTE PTR [NODE_MAP + ESI + NODE_FLAG], 2
 
-    MOV ECX, DWORD PTR [NODE_MAP + ESI + NODE_X_POS] 
-    MOV EDX, DWORD PTR [NODE_MAP + ESI + NODE_Y_POS] 
+    ; [FIX] 從 Index 計算座標 (1-based)
+    MOV EBX, N      
+    XOR EDX, EDX    
+    DIV EBX         ; EAX = y-1, EDX = x-1
+    
+    INC EAX         ; y
+    INC EDX         ; x
+    
+    MOV ECX, EDX    ; ECX = x
+    MOV EDX, EAX    ; EDX = y
     
     ; --- Check UP ---
     PUSH ECX
@@ -471,54 +383,52 @@ No_Path_Found:
     CLC
 
 Search_Done:
-    POP EBP
-    POP EDI
-    POP ESI
-    POP EDX
-    POP ECX
-    POP EBX
-    POP EAX
     RET
 A_Star_Search ENDP
 
-; -------------------------------------------------------
-; Process_Neighbor
-; -------------------------------------------------------
-Process_Neighbor PROC NEAR
-    PUSH EAX
-    PUSH EBX
-    PUSH EBP
+Process_Neighbor PROC NEAR USES EAX EBX EBP
     
+    ; 1. 邊界檢查
     CMP ECX, 1
     JL Skip_Proc
-    CMP ECX, MAZE_WIDTH ; 使用常數
+    CMP ECX, MAZE_WIDTH 
     JG Skip_Proc
     CMP EDX, 1
     JL Skip_Proc
-    CMP EDX, MAZE_HEIGHT ; 使用常數
+    CMP EDX, MAZE_HEIGHT 
     JG Skip_Proc
     
+    ; 2. 牆壁檢查
     CALL Check_Wall 
     JC Skip_Proc 
     
+    ; 3. 取得鄰居 Offset (EBP)
     CALL Get_Node_Offset 
     MOV EBP, EAX
     
+    ; 4. 檢查是否在 Closed List
     CMP BYTE PTR [NODE_MAP + EBP + NODE_FLAG], 2
     JE Skip_Proc
     
-    MOVZX EAX, WORD PTR [NODE_MAP + ESI + NODE_G_COST] ; <--- 修正: 讀 16-bit
-    INC EAX 
+    ; 5. 計算 New G = Parent.G + 1
+    MOVZX EAX, WORD PTR [NODE_MAP + ESI + NODE_G_COST] 
+    INC EAX ; EAX = New G
     
+    ; 6. 檢查 Open List
     CMP BYTE PTR [NODE_MAP + EBP + NODE_FLAG], 1
-    JNE New_Node
+    JNE New_Node_Label ; 如果不在 Open List，跳轉處理
     
-    MOVZX EBX, WORD PTR [NODE_MAP + EBP + NODE_G_COST] ; <--- 修正: 讀 16-bit
+    ; 如果在 Open List，比較 G 值
+    MOVZX EBX, WORD PTR [NODE_MAP + EBP + NODE_G_COST] 
     CMP EAX, EBX
-    JGE Skip_Proc 
-    JMP Update_Node
+    JGE Skip_Proc ; 如果 New G >= Old G，不更新
+    JMP Update_Node_Label
 
-New_Node:
+New_Node_Label:
+    ; *** 關鍵修正：保存 New G (EAX) ***
+    PUSH EAX 
+    
+    ; 計算 H 值 (會用到暫存器，所以要保護 context)
     PUSH ECX
     PUSH EDX
     PUSH ESI
@@ -530,14 +440,15 @@ New_Node:
     MOV EDI, EAX
     
     CALL Calculate_Manhattan_H
-    MOV WORD PTR [NODE_MAP + EBP + NODE_H_COST], AX ; <--- 修正: 寫入 16-bit
+    MOV WORD PTR [NODE_MAP + EBP + NODE_H_COST], AX ; 寫入 H
     
     POP EDI
     POP ESI
     POP EDX
     POP ECX
     
-    PUSH EAX 
+    ; 插入 Heap (需要 Node Index)
+    PUSH EAX ; 臨時保存 (雖然這裡 EAX 是 H，後面會被覆蓋)
     MOV EAX, EBP
     MOV EBX, NODE_SIZE_BYTES
     XOR EDX, EDX
@@ -546,37 +457,33 @@ New_Node:
     POP EAX 
     
     MOV BYTE PTR [NODE_MAP + EBP + NODE_FLAG], 1
+    
+    ; *** 關鍵修正：恢復 New G 到 EAX ***
+    POP EAX 
 
-Update_Node:
+Update_Node_Label:
+    ; 此時 EAX 必須是 New G
     MOV WORD PTR [NODE_MAP + EBP + NODE_G_COST], AX 
     
-    MOVZX EBX, WORD PTR [NODE_MAP + EBP + NODE_H_COST] ; <--- 修正: 16-bit
-    ADD EAX, EBX 
-    MOV WORD PTR [NODE_MAP + EBP + NODE_F_COST], AX 
+    ; 計算 F = G + H
+    MOVZX EBX, WORD PTR [NODE_MAP + EBP + NODE_H_COST] 
+    ADD EBX, EAX 
+    MOV WORD PTR [NODE_MAP + EBP + NODE_F_COST], BX 
     
+    ; 設定 Parent Index
+    PUSH EAX ; 保存 G (因為 DIV 會改 EAX)
     MOV EAX, ESI 
     MOV EBX, NODE_SIZE_BYTES
     XOR EDX, EDX
     DIV EBX 
-    MOV WORD PTR [NODE_MAP + EBP + NODE_PARENT], AX ; <--- 修正: 寫入 16-bit Index
+    MOV WORD PTR [NODE_MAP + EBP + NODE_PARENT], AX 
+    POP EAX ; 恢復 G
 
 Skip_Proc:
-    POP EBP
-    POP EBX
-    POP EAX
     RET
 Process_Neighbor ENDP
 
-; -------------------------------------------------------
-; Reconstruct_Path
-; -------------------------------------------------------
-Reconstruct_Path PROC NEAR
-    PUSH EAX
-    PUSH EBX
-    PUSH ECX
-    PUSH EDI
-    PUSH ESI
-    PUSH EBP
+Reconstruct_Path PROC NEAR USES EAX EBX ECX EDI ESI EBP
     
     MOV EAX, EDI 
     MOV EBX, NODE_SIZE_BYTES
@@ -588,14 +495,14 @@ Reconstruct_Path PROC NEAR
     
 Reconstruct_Loop:
     DEC ECX
-    MOV WORD PTR [GHOST_PATH + ECX*2], BX ; <--- 修正: 寫入 16-bit
+    MOV WORD PTR [GHOST_PATH + ECX*2], BX 
     
     MOV EAX, EBX
     MOV EBX, NODE_SIZE_BYTES
     MUL EBX 
     MOV ESI, EAX 
 
-    MOVZX EBX, WORD PTR [NODE_MAP + ESI + NODE_PARENT] ; <--- 修正: 讀取 16-bit
+    MOVZX EBX, WORD PTR [NODE_MAP + ESI + NODE_PARENT] 
 
     CMP EBX, 0FFFFh 
     JNE Reconstruct_Loop
@@ -616,12 +523,6 @@ Move_Path_Loop:
     INC EDI
     LOOP Move_Path_Loop
     
-    POP EBP
-    POP ESI
-    POP EDI
-    POP ECX
-    POP EBX
-    POP EAX
     RET
 Reconstruct_Path ENDP
 
