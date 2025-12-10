@@ -18,10 +18,7 @@ PUBLIC Ghost_Follow_Path
 
 .CODE
 
-; =======================================================
-; FUNCTION: Ghost_Main_Update
 ; 描述: 幽靈的每幀更新函數 (由 Main Loop 呼叫)
-; =======================================================
 Ghost_Main_Update PROC NEAR
     ; 使用 32 位元暫存器保存狀態
     PUSH EAX
@@ -56,10 +53,7 @@ Update_Done:
     RET
 Ghost_Main_Update ENDP
 
-; =======================================================
-; FUNCTION: Ghost_Follow_Path
 ; 描述: 沿著 GHOST_PATH 執行網格移動
-; =======================================================
 Ghost_Follow_Path PROC NEAR
     PUSH EAX
     PUSH EBX
