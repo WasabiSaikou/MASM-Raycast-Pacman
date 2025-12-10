@@ -10,7 +10,7 @@ EXTERN ghostX:DWORD, ghostY:DWORD
 EXTERN MazeMap:BYTE, N:DWORD
 EXTERN gameOverFlag:DWORD, gameWinFlag:DWORD
 
-EXTERN gameState:PROC
+gameState PROTO 
 
 .code
 collision PROC 
