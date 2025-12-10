@@ -2,7 +2,7 @@
 MAZE_WIDTH       EQU 32
 MAZE_HEIGHT      EQU 32
 TOTAL_NODES      EQU 32 * 32
-PATH_BUFFER_SIZE EQU 100  ; 
+PATH_BUFFER_SIZE EQU 100  
 
 ; 節點結構偏移量 (配合 32-bit 存取調整)
 NODE_X_POS      EQU 0    ; 4 Bytes (DWORD)
