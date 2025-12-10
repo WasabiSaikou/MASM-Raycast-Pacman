@@ -9,8 +9,8 @@ EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD
 EXTERN prevX:DWORD, prevY:DWORD
 EXTERN ghostX:DWORD, ghostY:DWORD
 
-EXTERN resetMaze:PROC
-EXTERN PlayerReset:PROC
+resetMaze PROTO 
+PlayerReset PROTO
 
 .data
 point DWORD 0
