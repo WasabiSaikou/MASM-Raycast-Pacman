@@ -9,6 +9,7 @@ EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD
 EXTERN prevX:DWORD, prevY:DWORD
 EXTERN ghostX:DWORD, ghostY:DWORD
 EXTERN inputCode:DWORD
+EXTERN waitToStartFlag:DWORD
 
 EXTERN resetMaze:PROC
 EXTERN PlayerReset:PROC
@@ -58,6 +59,7 @@ timeInterval:
     call Crlf
 
     call ReadChar
+    call Clrscr
 
 resetGame:
     xor eax, eax
@@ -73,6 +75,9 @@ resetGame:
     mov ghostY, eax
     
     call resetMaze
+    
+    mov eax, 1
+    mov waitToStartFlag, eax
 
 continueGame:
     ret

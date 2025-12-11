@@ -21,13 +21,17 @@ InitRender PROTO
 
 EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD, inputCode:DWORD
 EXTERN ghostX:DWORD, ghostY:DWORD
+EXTERN inputCode:DWORD
 
+PUBLIC waitToStartFlag
 
 .data
-tickMs   DWORD 16    ; length of each tick: 16ms → approximately 60 ticks/second
-lastTick DWORD 0     ; Last update time
-nowTime  DWORD 0     ; now time
-elapsed  DWORD 0     ; Difference from the last update
+tickMs   DWORD 16        ; length of each tick: 16ms → approximately 60 ticks/second
+lastTick DWORD 0         ; Last update time
+nowTime  DWORD 0         ; now time
+elapsed  DWORD 0         ; Difference from the last update
+waitToStartFlag DWORD 1
+pressStartMsg BYTE "Press any key to start !", 0
 
 .code
 
@@ -62,8 +66,15 @@ main_loop:
     mov lastTick, eax
 
 ; --------------------------------------
-;       An update of a tick begins
+;      An update of a tick begins
 ; --------------------------------------
+
+    ; check if is waiting for game start
+    mov eax, waitToStartFlag
+    cmp eax, 1
+    je waitForStart
+
+gameUpdate:
     ; player
     call InputModule 
     call PlayerRotate
@@ -78,9 +89,23 @@ main_loop:
     
     ; interface
     ; call render
+
     mov eax, 100
     call Delay
     
+    jmp main_loop
+
+waitForStart:
+    mov edx, OFFSET pressStartMsg
+    call WriteString
+    call Crlf
+
+    call ReadChar
+    call Clrscr
+    
+    xor eax, eax
+    mov waitToStartFlag, eax
+
     jmp main_loop
     
 main ENDP
