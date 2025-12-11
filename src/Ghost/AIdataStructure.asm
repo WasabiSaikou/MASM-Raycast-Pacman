@@ -24,10 +24,10 @@ PATH_LENGTH DWORD 0
 CURRENT_PATH_STEP DWORD 0     
 
 ; --- 4. 坐標 (32-bit) ---
-ghostX DWORD 27           
-ghostY DWORD 5           
-targetX DWORD 16          
-targetY DWORD 15          
+ghostX DWORD 26           
+ghostY DWORD 4           
+targetX DWORD 15          
+targetY DWORD 14          
 
 ; --- 5. 狀態與速度 ---
 GHOST_STATE DB 0  
