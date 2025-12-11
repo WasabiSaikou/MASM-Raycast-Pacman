@@ -1,15 +1,13 @@
 TITLE ghost_test_main
 
-; --- 1. 引入 Irvine 庫和常數定義 ---
 INCLUDE Irvine32.inc
 INCLUDE AIDataStruct.inc   ; 引入常數
 
-; --- 2. 外部程序宣告 (PROTO) ---
-; [修正重點]：原本是 A_Star_Search 和 Ghost_Follow_Path
+; 原本是 A_Star_Search 和 Ghost_Follow_Path
 ; 現在改成只呼叫 ghostPos，因為它封裝了所有邏輯
 ghostPos PROTO
+Init_Node_Map PROTO
 
-; --- 3. 外部變數宣告 (EXTERN) ---
 ; 這些變數仍然需要，因為我們要印出數值來驗證
 EXTERN ghostX:DWORD, ghostY:DWORD       
 EXTERN targetX:DWORD, targetY:DWORD     
@@ -35,13 +33,13 @@ successMsg    BYTE "Ghost Reached Target!", 0dh, 0ah, 0
 main PROC
 
     CALL Clrscr
+    CALL Init_Node_Map
 
-    ; 設定測試座標 (使用地圖中間較安全的空地)
-    MOV ghostX, 2    ; 起點 X
-    MOV ghostY, 2    ; 起點 Y
+    MOV ghostX, 1    ; 起點 X
+    MOV ghostY, 1    ; 起點 Y
     
-    MOV targetX, 8   ; 終點 X
-    MOV targetY, 2   ; 終點 Y
+    MOV targetX, 7   ; 終點 X
+    MOV targetY, 1   ; 終點 Y
     
     MOV EDX, OFFSET startMsg
     CALL WriteString
