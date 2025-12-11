@@ -15,12 +15,10 @@ gameState PROTO
 .code
 collision PROC 
 
-    ; calculate index = N * (playerY - 1) + (playerX - 1)
+    ; calculate index = N * playerY + playerX
     mov eax, playerY
-    dec eax
     imul eax, N
     mov edx, playerX
-    dec edx
     add eax, edx                   ; eax = index
     mov ebx, OFFSET MazeMap
     movzx ecx, BYTE PTR [ebx+eax]  ; ecx = MazeMap[index]
