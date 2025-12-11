@@ -79,12 +79,14 @@ gameUpdate:
     call InputModule 
     call PlayerRotate
     call PlayerPos 
+    ; check if player hit the wall
+    call collision
 
     ; ghost
     call ghostPos
 
     ; logic
-    call Collision
+    call collision
     call gameState
     
     ; interface
