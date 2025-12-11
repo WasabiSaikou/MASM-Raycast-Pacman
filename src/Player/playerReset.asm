@@ -3,6 +3,7 @@ INCLUDE Irvine32.inc
 
 EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD
 EXTERN inputCode:DWORD
+EXTERN prevX:DWORD, prevY:DWORD
 
 PUBLIC PlayerReset
 
@@ -15,6 +16,8 @@ PlayerReset PROC
 
     mov playerX, 16       ; 回到初始位置
     mov playerY, 15
+    mov prevX, 16
+    mov prevY, 15
     mov dir, 1           ; 初始朝向：右（你的原始設定）
 
 reset_end:
