@@ -1,21 +1,17 @@
 TITLE ghostPos Module
 
-; --- 1. 模型設定 ---
 .MODEL FLAT, STDCALL
 INCLUDE Irvine32.inc
 INCLUDE AIDataStruct.inc 
 
-; --- 2. 外部變數宣告 (EXTERN) ---
 EXTERN ghostX:DWORD, ghostY:DWORD 
 EXTERN targetX:DWORD, targetY:DWORD
 EXTERN PATH_LENGTH:DWORD, CURRENT_PATH_STEP:DWORD
 EXTERN GHOST_PATH:WORD 
 EXTERN NODE_MAP:BYTE
 
-; --- 3. 外部程序宣告 (PROTO) ---
 Ghost_Main_Update PROTO
 
-; --- 4. 公開程序宣告 ---
 PUBLIC ghostPos
 
 .CODE
