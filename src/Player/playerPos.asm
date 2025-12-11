@@ -2,10 +2,9 @@ TITLE PlayerPos
 
 INCLUDE Irvine32.inc
 
-EXTERN moveState:DWORD
 EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD
 EXTERN prevX:DWORD, prevY:DWORD
-EXTERN N:DWORD
+EXTERN N:DWORD, inputCode:DWORD
 
 PUBLIC PlayerPos
 
@@ -16,7 +15,7 @@ PlayerPos PROC
     mov eax, playerY
     mov prevY, eax
 
-    mov eax, moveState
+    mov eax, inputCode
     cmp eax, 1
     je wCase
     cmp eax, 2
