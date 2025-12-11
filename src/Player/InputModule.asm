@@ -13,12 +13,6 @@ InputModule PROC
 
     call ReadChar
 
-    ; Reset (R/r)
-    cmp al, 'R'
-    je setReset
-    cmp al, 'r'
-    je setReset
-
     ; WASD
     cmp al, 'W'
     je setForward
@@ -64,9 +58,6 @@ setRotateLeft:
     ret
 setRotateRight:  
     mov  inputCode, 6
-    ret
-setReset:        
-    mov  inputCode, 7
     ret
 
 input_end:
