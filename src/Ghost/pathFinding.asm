@@ -12,13 +12,56 @@ EXTERN OPEN_LIST_BUFFER:WORD
 
 PUBLIC Absolute_Value, Calculate_Manhattan_H, Get_Node_Offset
 PUBLIC Heap_Insert, Heap_Extract_Min, Reset_A_Star, A_Star_Search, Reconstruct_Path
+PUBLIC Init_Node_Map
 
 .CODE
 
-Check_Wall PROC NEAR USES EAX EBX ECX EDX
+Init_Node_Map PROC NEAR USES EAX EBX ECX EDX ESI EDI
     
-    DEC ECX
-    DEC EDX
+    MOV ECX, 0 ; 使用 ECX 作為 Index (0 ~ 1023)
+
+Init_Loop:
+    CMP ECX, TOTAL_NODES
+    JGE Init_Done
+
+    ; --- 1. 計算 X 和 Y ---
+    ; Y = Index / N
+    ; X = Index % N
+    MOV EAX, ECX
+    MOV EBX, N
+    XOR EDX, EDX
+    DIV EBX      ; EAX = Y, EDX = X
+
+    ; --- 2. 計算記憶體 Offset ---
+    ; Offset = Index * NODE_SIZE_BYTES
+    PUSH EAX     ; 保存 Y
+    PUSH EDX     ; 保存 X
+    
+    MOV EAX, ECX
+    MOV EBX, NODE_SIZE_BYTES
+    MUL EBX
+    MOV ESI, EAX ; ESI = Offset
+
+    POP EDX      ; 恢復 X
+    POP EAX      ; 恢復 Y
+
+    ; --- 3. 寫入 NODE_MAP ---
+    MOV DWORD PTR [NODE_MAP + ESI + NODE_X_POS], EDX
+    MOV DWORD PTR [NODE_MAP + ESI + NODE_Y_POS], EAX
+    
+    ; 順便初始化其他欄位
+    MOV WORD PTR [NODE_MAP + ESI + NODE_G_COST], 0FFFFh
+    MOV WORD PTR [NODE_MAP + ESI + NODE_F_COST], 0FFFFh
+    MOV BYTE PTR [NODE_MAP + ESI + NODE_FLAG], 0
+
+    INC ECX
+    JMP Init_Loop
+
+Init_Done:
+    RET
+Init_Node_Map ENDP
+
+Check_Wall PROC NEAR USES EAX EBX ECX EDX
     
     MOV EAX, EDX    
     MOV EBX, N      
@@ -65,9 +108,6 @@ Calculate_Manhattan_H PROC NEAR USES EBX ECX EDX ESI EDI
 Calculate_Manhattan_H ENDP
 
 Get_Node_Offset PROC NEAR USES EBX ECX EDX
-    
-    DEC ECX 
-    DEC EDX
 
     MOV EAX, EDX  
     MOV EBX, N 
@@ -334,9 +374,6 @@ Main_AStar_Loop:
     XOR EDX, EDX    
     DIV EBX         ; EAX = y-1, EDX = x-1
     
-    INC EAX         ; y
-    INC EDX         ; x
-    
     MOV ECX, EDX    ; ECX = x
     MOV EDX, EAX    ; EDX = y
     
@@ -389,14 +426,15 @@ A_Star_Search ENDP
 Process_Neighbor PROC NEAR USES EAX EBX EBP
     
     ; 1. 邊界檢查
-    CMP ECX, 1
+    CMP ECX, 0
     JL Skip_Proc
     CMP ECX, MAZE_WIDTH 
-    JG Skip_Proc
-    CMP EDX, 1
+    JGE Skip_Proc
+
+    CMP EDX, 0
     JL Skip_Proc
     CMP EDX, MAZE_HEIGHT 
-    JG Skip_Proc
+    JGE Skip_Proc
     
     ; 2. 牆壁檢查
     CALL Check_Wall 
@@ -425,7 +463,6 @@ Process_Neighbor PROC NEAR USES EAX EBX EBP
     JMP Update_Node_Label
 
 New_Node_Label:
-    ; *** 關鍵修正：保存 New G (EAX) ***
     PUSH EAX 
     
     ; 計算 H 值 (會用到暫存器，所以要保護 context)
@@ -458,7 +495,6 @@ New_Node_Label:
     
     MOV BYTE PTR [NODE_MAP + EBP + NODE_FLAG], 1
     
-    ; *** 關鍵修正：恢復 New G 到 EAX ***
     POP EAX 
 
 Update_Node_Label:
