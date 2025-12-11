@@ -7,7 +7,6 @@ PlayerState PROTO
 PlayerReset PROTO
 
 EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD, inputCode:DWORD, prevX:DWORD, prevY:DWORD
-EXTERN moveState:DWORD
 
 .data
 xMsg  BYTE "X=",0
@@ -63,9 +62,6 @@ main_loop:
     call PlayerPos
     call PlayerRotate
     call PlayerReset
-
-    mov eax, 200
-    call Delay
 
     jmp main_loop
 

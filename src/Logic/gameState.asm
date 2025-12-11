@@ -9,8 +9,8 @@ EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD
 EXTERN prevX:DWORD, prevY:DWORD
 EXTERN ghostX:DWORD, ghostY:DWORD
 
-resetMaze PROTO 
-PlayerReset PROTO
+EXTERN resetMaze:PROC
+EXTERN PlayerReset:PROC
 
 .data
 point DWORD 0
@@ -57,9 +57,9 @@ resetGame:
 
     call PlayerReset
     
-    mov eax, 27
+    mov eax, 26
     mov ghostX, eax
-    mov eax, 5
+    mov eax, 4
     mov ghostY, eax
     
     call resetMaze

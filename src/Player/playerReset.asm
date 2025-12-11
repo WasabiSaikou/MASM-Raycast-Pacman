@@ -14,10 +14,10 @@ PlayerReset PROC
     cmp eax, 7           ; inputCode = 7 表示 Reset
     jne reset_end
 
-    mov playerX, 16       ; 回到初始位置
-    mov playerY, 15
-    mov prevX, 16
-    mov prevY, 15
+    mov playerX, 15       ; 回到初始位置
+    mov playerY, 14
+    mov prevX, 15
+    mov prevY, 14
     mov dir, 1           ; 初始朝向：右（你的原始設定）
 
 reset_end:
