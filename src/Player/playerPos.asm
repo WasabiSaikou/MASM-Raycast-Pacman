@@ -10,6 +10,11 @@ PUBLIC PlayerPos
 
 .code
 PlayerPos PROC
+    mov eax, inputCode
+    ; 若輸入為無效直接跳到尾端，不改變prevX, prevY
+    cmp eax, 0
+    je pos_end
+
     mov eax, playerX
     mov prevX, eax
     mov eax, playerY
