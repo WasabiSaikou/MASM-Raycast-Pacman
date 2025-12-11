@@ -20,35 +20,35 @@ main PROC
 
 main_loop:
 
-    ; 印 "PrevX="
+    ; print "PrevX="
     mov edx, OFFSET pxMsg
     call WriteString
     mov eax, prevX
     call WriteDec
     call Crlf
 
-    ; 印 "PrevY="
+    ; print "PrevY="
     mov edx, OFFSET pyMsg
     call WriteString
     mov eax, prevY
     call WriteDec
     call Crlf
 
-    ; 印 "X="
+    ; print "X="
     mov edx, OFFSET xMsg
     call WriteString
     mov eax, playerX
     call WriteDec
     call Crlf
 
-    ; 印 "Y="
+    ; print "Y="
     mov edx, OFFSET yMsg
     call WriteString
     mov eax, playerY
     call WriteDec
     call Crlf
 
-    ; 印 "DIR="
+    ; print "DIR="
     mov edx, OFFSET dirMsg
     call WriteString
     mov eax, dir
@@ -57,11 +57,13 @@ main_loop:
     call Crlf
     call Crlf
 
-    ; 取得輸入
+    ; get input
     call InputModule
     call PlayerPos
     call PlayerRotate
-    call PlayerReset
+
+    mov eax, 200
+    call Delay
 
     jmp main_loop
 
