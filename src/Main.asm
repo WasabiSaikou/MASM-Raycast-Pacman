@@ -16,6 +16,9 @@ collision PROTO
 gameState PROTO
 maze PROTO
 
+render PROTO
+InitRender PROTO
+
 EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD, inputCode:DWORD
 EXTERN ghostX:DWORD, ghostY:DWORD
 
@@ -27,11 +30,13 @@ nowTime  DWORD 0     ; now time
 elapsed  DWORD 0     ; Difference from the last update
 
 .code
+
 main PROC
 
     ; Initialize lastTick
     call GetTickCount
     mov lastTick, eax
+    call InitRender
 
 main_loop:
 ; --------------------------------------
@@ -72,7 +77,10 @@ main_loop:
     call gameState
     
     ; interface
-
+    ; call render
+    mov eax, 100
+    call Delay
+    
     jmp main_loop
     
 main ENDP
