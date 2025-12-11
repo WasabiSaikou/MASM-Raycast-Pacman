@@ -11,8 +11,8 @@ EXTERN ghostX:DWORD, ghostY:DWORD
 EXTERN inputCode:DWORD
 EXTERN waitToStartFlag:DWORD
 
-EXTERN resetMaze:PROC
-EXTERN PlayerReset:PROC
+resetMaze PROTO
+PlayerReset PROTO
 
 .data
 point DWORD 0
