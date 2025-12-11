@@ -2,17 +2,12 @@ TITLE PlayerReset
 INCLUDE Irvine32.inc
 
 EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD
-EXTERN inputCode:DWORD
 EXTERN prevX:DWORD, prevY:DWORD
 
 PUBLIC PlayerReset
 
 .code
 PlayerReset PROC
-
-    mov eax, inputCode
-    cmp eax, 7           ; inputCode = 7 表示 Reset
-    jne reset_end
 
     mov playerX, 15       ; 回到初始位置
     mov playerY, 14
