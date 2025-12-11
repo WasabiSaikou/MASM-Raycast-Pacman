@@ -13,6 +13,7 @@ PlayerRotate PROTO
 ghostPos PROTO
 
 collision PROTO
+collisionGhost PROTO
 gameState PROTO
 maze PROTO
 
@@ -86,7 +87,7 @@ gameUpdate:
     call ghostPos
 
     ; logic
-    call collision
+    call collisionGhost
     call gameState
     
     ; interface
