@@ -91,7 +91,7 @@ gameUpdate:
     call gameState
     
     ; interface
-    ; call render
+    call render
 
     mov eax, 100
     call Delay
