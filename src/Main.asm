@@ -17,7 +17,8 @@ collisionGhost PROTO
 gameState PROTO
 maze PROTO
 
-render PROTO
+;render PROTO
+render2D PROTO
 InitRender PROTO
 
 EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD, inputCode:DWORD
@@ -91,7 +92,8 @@ gameUpdate:
     call gameState
     
     ; interface
-    call render
+    ; call render
+    call render2D
 
     mov eax, 100
     call Delay
