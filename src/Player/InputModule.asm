@@ -11,7 +11,8 @@ InputModule PROC
 
     mov dword ptr inputCode, 0
 
-    call ReadChar
+    call ReadKey
+    jz input_end              ; Jump if Zero Flag set (no key pressed)
 
     ; WASD
     cmp al, 'W'
@@ -38,27 +39,36 @@ InputModule PROC
     je   setRotateLeft
     cmp  ax, 4D00h                 ; right arrow
     je   setRotateRight
+    
+    ; Reset (R/r)
+    cmp al, 'R'
+    je setReset
+    cmp al, 'r'
+    je setReset
 
     jmp input_end
 
 setForward:      
     mov inputCode, 1
-    ret
+    jmp input_end
 setLeft:
     mov inputCode, 2
-    ret
+    jmp input_end
 setBackward:
     mov inputCode, 3
-    ret
+    jmp input_end
 setRight:
     mov inputCode, 4
-    ret
+    jmp input_end
 setRotateLeft:   
-    mov  inputCode, 5
-    ret
+    mov inputCode, 5
+    jmp input_end
 setRotateRight:  
-    mov  inputCode, 6
-    ret
+    mov inputCode, 6
+    jmp input_end
+setReset:
+    mov inputCode, 7
+    jmp input_end
 
 input_end:
     ret
