@@ -23,7 +23,7 @@ InitRender PROTO
 EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD, inputCode:DWORD
 EXTERN ghostX:DWORD, ghostY:DWORD
 EXTERN targetX:DWORD, targetY:DWORD
-EXTERN gameStateFlag:DWORD, resultDisplayTimer:DWORD
+EXTERN gameStateFlag:DWORD
 
 PUBLIC tickMs
 
