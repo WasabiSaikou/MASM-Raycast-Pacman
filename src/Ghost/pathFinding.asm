@@ -421,7 +421,7 @@ Search_Done:
     RET
 A_Star_Search ENDP
 
-Process_Neighbor PROC NEAR USES EAX EBX EBP
+Process_Neighbor PROC NEAR USES EAX EBX EDI
     
     ; 1. 邊界檢查
     CMP ECX, 0
@@ -440,10 +440,10 @@ Process_Neighbor PROC NEAR USES EAX EBX EBP
     
     ; 3. 取得鄰居 Offset (EBP)
     CALL Get_Node_Offset 
-    MOV EBP, EAX
+    MOV EDI, EAX
     
     ; 4. 檢查是否在 Closed List
-    CMP BYTE PTR [NODE_MAP + EBP + NODE_FLAG], 2
+    CMP BYTE PTR [NODE_MAP + EDI + NODE_FLAG], 2
     JE Skip_Proc
     
     ; 5. 計算 New G = Parent.G + 1
@@ -451,11 +451,11 @@ Process_Neighbor PROC NEAR USES EAX EBX EBP
     INC EAX ; EAX = New G
     
     ; 6. 檢查 Open List
-    CMP BYTE PTR [NODE_MAP + EBP + NODE_FLAG], 1
+    CMP BYTE PTR [NODE_MAP + EDI + NODE_FLAG], 1
     JNE New_Node_Label ; 如果不在 Open List，跳轉處理
     
     ; 如果在 Open List，比較 G 值
-    MOVZX EBX, WORD PTR [NODE_MAP + EBP + NODE_G_COST] 
+    MOVZX EBX, WORD PTR [NODE_MAP + EDI + NODE_G_COST] 
     CMP EAX, EBX
     JGE Skip_Proc ; 如果 New G >= Old G，不更新
     JMP Update_Node_Label
@@ -475,34 +475,35 @@ New_Node_Label:
     MOV EDI, EAX
     
     CALL Calculate_Manhattan_H
-    MOV WORD PTR [NODE_MAP + EBP + NODE_H_COST], AX ; 寫入 H
     
     POP EDI
     POP ESI
     POP EDX
     POP ECX
     
+    MOV WORD PTR [NODE_MAP + EDI + NODE_H_COST], AX ;
+
     ; 插入 Heap (需要 Node Index)
     PUSH EAX ; 臨時保存 (雖然這裡 EAX 是 H，後面會被覆蓋)
-    MOV EAX, EBP
+    MOV EAX, EDI
     MOV EBX, NODE_SIZE_BYTES
     XOR EDX, EDX
     DIV EBX 
     CALL Heap_Insert
     POP EAX 
     
-    MOV BYTE PTR [NODE_MAP + EBP + NODE_FLAG], 1
+    MOV BYTE PTR [NODE_MAP + EDI + NODE_FLAG], 1
     
     POP EAX 
 
 Update_Node_Label:
     ; 此時 EAX 必須是 New G
-    MOV WORD PTR [NODE_MAP + EBP + NODE_G_COST], AX 
+    MOV WORD PTR [NODE_MAP + EDI + NODE_G_COST], AX 
     
     ; 計算 F = G + H
-    MOVZX EBX, WORD PTR [NODE_MAP + EBP + NODE_H_COST] 
+    MOVZX EBX, WORD PTR [NODE_MAP + EDI + NODE_H_COST] 
     ADD EBX, EAX 
-    MOV WORD PTR [NODE_MAP + EBP + NODE_F_COST], BX 
+    MOV WORD PTR [NODE_MAP + EDI + NODE_F_COST], BX 
     
     ; 設定 Parent Index
     PUSH EAX ; 保存 G (因為 DIV 會改 EAX)
@@ -510,7 +511,7 @@ Update_Node_Label:
     MOV EBX, NODE_SIZE_BYTES
     XOR EDX, EDX
     DIV EBX 
-    MOV WORD PTR [NODE_MAP + EBP + NODE_PARENT], AX 
+    MOV WORD PTR [NODE_MAP + EDI + NODE_PARENT], AX 
     POP EAX ; 恢復 G
 
 Skip_Proc:
