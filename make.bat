@@ -39,6 +39,9 @@ if errorlevel 1 goto terminate
 ML /c /coff /Zi /I. src\Ghost\ghostPos.asm  
 if errorlevel 1 goto terminate
 
+ML /c /coff /Zi /I. src\Ghost\ghostReset.asm  
+if errorlevel 1 goto terminate
+
 ML /c /coff /Zi /I. src\Logic\gameState.asm  
 if errorlevel 1 goto terminate
 
@@ -71,12 +74,12 @@ REM Kernel32.lib        library procedures to be invoked from the program
 REM irvine32.lib
 REM user32.lib
 
-LINK /INCREMENTAL:no /debug /subsystem:console /entry:start /out:Main.exe Main.obj InputModule.obj playerPos.obj playerReset.obj playerRotate.obj playerState.obj pathFinding.obj AIdataStructure.obj ghostBehavior.obj ghostPos.obj gameState.obj maze.obj collision.obj collisionGhost.obj render.obj renderGL.obj render2D.obj Kernel32.lib irvine32.lib user32.lib OpenGL32.lib Gdi32.lib
+LINK /INCREMENTAL:no /debug /subsystem:console /entry:start /out:Main.exe Main.obj InputModule.obj playerPos.obj playerReset.obj playerRotate.obj playerState.obj pathFinding.obj AIdataStructure.obj ghostBehavior.obj ghostPos.obj ghostReset.obj gameState.obj maze.obj collision.obj collisionGhost.obj render.obj renderGL.obj render2D.obj Kernel32.lib irvine32.lib user32.lib OpenGL32.lib Gdi32.lib
 
 if errorlevel 1 goto terminate
 
 REM Display all files related to this program:
-DIR Main.* InputModule.* playerPos.* playerReset.* playerRotate.* playerState.* pathFinding.* AIdataStructure.* ghostBehavior.* ghostPos.* gameState.* maze.* collision.* collisionGhost.* render.* rendeGL.* render2D.*
+DIR Main.* InputModule.* playerPos.* playerReset.* playerRotate.* playerState.* pathFinding.* AIdataStructure.* ghostBehavior.* ghostPos.* ghostReset.* gameState.* maze.* collision.* collisionGhost.* render.* rendeGL.* render2D.*
 
 :terminate
 pause

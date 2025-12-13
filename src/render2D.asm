@@ -6,6 +6,8 @@ EXTERN MazeMap:BYTE, N:DWORD, MazeSize:DWORD
 EXTERN ghostX:DWORD, ghostY:DWORD
 EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD, point:DWORD
 
+EXTERN gameStateFlag:DWORD, gameOverMsg:DWORD, gameWinMsg:DWORD, pressKeyMsg:DWORD
+
 PUBLIC render2D
 
 .data
@@ -26,9 +28,41 @@ drawMaze BYTE 32 DUP (32 DUP (?))
 
 .code
 render2D PROC
+    ; clear the screen
+    call Clrscr
+
+    ; check gameStateFlag
+    mov eax, gameStateFlag
+    cmp eax, 3
+    je showWinMsg
+    cmp eax, 4
+    je showLoseMsg
+    cmp eax, 5
+    je showResetMsg
+    jmp printGame
+
+showWinMsg:
+    mov edx, OFFSET gameWinMsg
+    call WriteString
+    call Crlf
+    ret
+
+showLoseMsg:
+    mov edx, OFFSET gameOverMsg
+    call WriteString
+    call Crlf
+    ret
+
+showResetMsg:
+    mov edx, OFFSET pressKeyMsg
+    call WriteString
+    call Crlf
+    ret
+
 ; ----------------------------------
 ;        print game message
 ; ----------------------------------
+printGame:
     ; print playerX
     mov edx, OFFSET playerXMsg
     call WriteString

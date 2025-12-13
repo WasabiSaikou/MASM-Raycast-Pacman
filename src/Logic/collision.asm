@@ -8,7 +8,7 @@ EXTERN playerX:DWORD, playerY:DWORD, point:DWORD
 EXTERN prevX:DWORD, prevY:DWORD
 EXTERN ghostX:DWORD, ghostY:DWORD
 EXTERN MazeMap:BYTE, N:DWORD
-EXTERN gameOverFlag:DWORD, gameWinFlag:DWORD
+EXTERN gameStateFlag:DWORD
 
 gameState PROTO 
 
@@ -46,7 +46,7 @@ notHitWall:
     cmp edx, 361
     jne checkGhost
     mov ebx, 1
-    mov gameWinFlag, ebx
+    mov gameStateFlag, ebx
     call gameState
 
 checkGhost:
@@ -59,8 +59,8 @@ checkGhost:
     jne noCollision
 
     ; hit the ghost → game over
-    mov ebx, 1
-    mov gameOverFlag, ebx
+    mov ebx, 2
+    mov gameStateFlag, ebx
     call gameState
 
 noCollision:

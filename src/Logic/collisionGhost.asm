@@ -6,7 +6,7 @@ PUBLIC collisionGhost
 
 EXTERN playerX:DWORD, playerY:DWORD
 EXTERN ghostX:DWORD, ghostY:DWORD
-EXTERN gameOverFlag:DWORD
+EXTERN gameStateFlag:DWORD
 
 gameState PROTO 
 
@@ -21,8 +21,8 @@ collisionGhost PROC
     jne noCollision
 
     ; hit the ghost → game over
-    mov ebx, 1
-    mov gameOverFlag, ebx
+    mov ebx, 2
+    mov gameStateFlag, ebx
     call gameState
 
 noCollision:
