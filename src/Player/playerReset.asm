@@ -13,9 +13,8 @@ PlayerReset PROC
     mov playerY, 14
     mov prevX, 15
     mov prevY, 14
-    mov dir, 1           ; 初始朝向：右（你的原始設定）
+    mov dir, 0
 
-reset_end:
     ret
 PlayerReset ENDP
 

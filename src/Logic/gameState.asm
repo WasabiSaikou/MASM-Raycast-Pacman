@@ -10,7 +10,6 @@ EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD
 EXTERN prevX:DWORD, prevY:DWORD
 EXTERN ghostX:DWORD, ghostY:DWORD
 EXTERN inputCode:DWORD
-;EXTERN waitToStartFlag:DWORD
 EXTERN tickMs:DWORD
 
 resetMaze PROTO
@@ -21,11 +20,9 @@ GhostReset PROTO
 point DWORD 0
 gameOverMsg BYTE "GAME OVER",0
 gameWinMsg BYTE "YOU WIN", 0
-pressKeyMsg BYTE "Press any key to reset...", 0
 
 ; 0: playing, 1: win, 2: lose, 3: show win message, 4: show lose message, 5: reset game
 gameStateFlag DWORD 0       
-resultDisplayTimer DWORD 0  ; A timer used to count down 1000ms
 
 .code
 gameState PROC
@@ -53,14 +50,12 @@ Win:
     ; show the message of win
     mov ebx, 3
     mov gameStateFlag, ebx
-    mov resultDisplayTimer, 1000  ; set 1000ms
     ret
 
 GameOver:
     ; show the message of GameOver 
     mov ebx, 4
     mov gameStateFlag, ebx
-    mov resultDisplayTimer, 1000  ; set 1000ms
     ret
 
 resetGame:
@@ -72,8 +67,9 @@ resetGame:
     call GhostReset
     call resetMaze
     
-    ;mov eax, 1
-    ;mov waitToStartFlag, eax
+    ; Clear input AFTER reset
+    xor eax, eax
+    mov inputCode, eax
 
 continueGame:
     ret

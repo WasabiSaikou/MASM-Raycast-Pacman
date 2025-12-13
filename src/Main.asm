@@ -4,152 +4,120 @@ INCLUDE Irvine32.inc
 
 main          EQU start@0
 
-GetTickCount PROTO   ; Windows API: The number of milliseconds since the system started sending data back
+GetTickCount PROTO
 
 InputModule PROTO
 PlayerPos PROTO
 PlayerRotate PROTO
 
 ghostPos PROTO
-Init_Node_Map PROTO
 
 collision PROTO
 collisionGhost PROTO
 gameState PROTO
 maze PROTO
 
-;render PROTO
 render2D PROTO
 InitRender PROTO
 
 EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD, inputCode:DWORD
 EXTERN ghostX:DWORD, ghostY:DWORD
-EXTERN inputCode:DWORD
+EXTERN targetX:DWORD, targetY:DWORD
 EXTERN gameStateFlag:DWORD, resultDisplayTimer:DWORD
 
-;PUBLIC waitToStartFlag
 PUBLIC tickMs
 
 .data
-tickMs   DWORD 100        ; length of each tick: 16ms → approximately 60 ticks/second
-lastTick DWORD 0         ; Last update time
-nowTime  DWORD 0         ; now time
-elapsed  DWORD 0         ; Difference from the last update
-;waitToStartFlag DWORD 1
-;pressStartMsg BYTE "Press any key to start !", 0
+tickMs   DWORD 100
+lastTick DWORD 0
+nowTime  DWORD 0
+elapsed  DWORD 0
 
 .code
 
 main PROC
-
-    ; Initialize lastTick
+    call Clrscr
+    
     call GetTickCount
     mov lastTick, eax
     call InitRender
 
 main_loop:
 ; --------------------------------------
-;       Determine time interval
+;       Timing
 ; --------------------------------------
-    ; get nowTime
     call GetTickCount
     mov nowTime, eax
     
-    ; calculate elapsed = nowTime - lastTick
     mov eax, nowTime
     sub eax, lastTick
     mov elapsed, eax
 
-    ; if elapsed < tickMs → continue waiting
-    mov eax, elapsed
     cmp eax, tickMs
     jb main_loop
 
-    ; update lastTick
-    mov eax, lastTick
-    add eax, tickMs
+    mov eax, nowTime
     mov lastTick, eax
 
 ; --------------------------------------
-;      An update of a tick begins
+;       Game Logic Update
 ; --------------------------------------
-
-    ; check if is playing
-    ; 0: playing, 3、4: show message for one second, 5: reset game
     mov eax, gameStateFlag
     cmp eax, 5
-    je resetAll
+    je do_reset
     cmp eax, 3
-    je checkDisplay
+    je check_win_input
     cmp eax, 4
-    je checkDisplay
+    je check_lose_input
+    jmp do_game_update
 
-    ; check if is waiting for game start
-;    mov eax, waitToStartFlag
-;    cmp eax, 1
-;    je waitForStart
+check_win_input:
+check_lose_input:
+    call InputModule
+    mov eax, inputCode
+    cmp eax, 0
+    je render_frame
+    
+    mov gameStateFlag, 5
+    jmp render_frame
 
-gameUpdate:
-    call Clrscr
+do_reset:
+    call gameState
+    jmp render_frame
 
-    ; player
-    call InputModule 
+do_game_update:
+    call InputModule
+    
+    mov eax, inputCode
+    cmp eax, 7
+    je trigger_reset
+    
     call PlayerRotate
     call PlayerPos 
-    ; check if player hit the wall
     call collision
 
-    ; ghost
-    call Init_Node_Map
+    ; Update ghost target to current player position
+    mov eax, playerX
+    mov targetX, eax
+    mov eax, playerY
+    mov targetY, eax
+
+    ; Ghost with BFS pathfinding
     call ghostPos
 
-    ; logic
     call collisionGhost
     call gameState
-    
-    jmp renderSection
+    jmp render_frame
 
-; before begin the game
-;waitForStart:
-;    mov edx, OFFSET pressStartMsg
-;    call WriteString
-;    call Crlf
-
-;    call ReadKey
-;    call Clrscr
-    
-;   xor eax, eax
-;    mov waitToStartFlag, eax
-;    jmp renderSection
-
-
-checkDisplay:
-    ; when player win or lose will show message for 1 second
-    mov eax, resultDisplayTimer
-    cmp eax, 0
-    jle resultEnd
-
-    ; resultDisplayTimer = resultDisplayTimer - tickMs (16)
-    sub eax, tickMs
-    mov resultDisplayTimer, eax
-
-    jmp renderSection
-
-resultEnd:
-    ; end 1 second
+trigger_reset:
     mov gameStateFlag, 5
-    jmp nextLoop
+    jmp render_frame
 
-resetAll:
-    call gameState
-    jmp nextLoop
-
-renderSection:
-    ; interface
-    ; call render
+; --------------------------------------
+;       ALWAYS Render Every Frame
+; --------------------------------------
+render_frame:
     call render2D
-
-nextLoop:
     jmp main_loop
     
 main ENDP
