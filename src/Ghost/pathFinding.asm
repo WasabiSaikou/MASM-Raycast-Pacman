@@ -314,23 +314,19 @@ Reset_Loop:
 Reset_A_Star ENDP
 
 A_Star_Search PROC NEAR USES EAX EBX ECX EDX ESI EDI EBP 
-
     CALL Reset_A_Star
-    
     MOV EAX, ghostX 
     MOV ECX, EAX     
     MOV EAX, ghostY
     MOV EDX, EAX     
     CALL Get_Node_Offset 
-    MOV EBP, EAX     
-
+    MOV EBX, EAX    
     MOV EAX, targetX
     MOV ECX, EAX
     MOV EAX, targetY
     MOV EDX, EAX
     CALL Get_Node_Offset 
     MOV EDI, EAX
-
     PUSH EDI 
     MOV ECX, ghostX
     MOV EDX, ghostY
@@ -339,19 +335,19 @@ A_Star_Search PROC NEAR USES EAX EBX ECX EDX ESI EDI EBP
     CALL Calculate_Manhattan_H 
     POP EDI
     
-    MOV WORD PTR [NODE_MAP + EBP + NODE_G_COST], 0 
-    MOV WORD PTR [NODE_MAP + EBP + NODE_H_COST], AX 
-    MOV WORD PTR [NODE_MAP + EBP + NODE_F_COST], AX 
+    MOV WORD PTR [NODE_MAP + EBX + NODE_G_COST], 0 
+    MOV WORD PTR [NODE_MAP + EBX + NODE_H_COST], AX 
+    MOV WORD PTR [NODE_MAP + EBX + NODE_F_COST], AX 
     
-    MOV EAX, EBP
+    MOV EAX, EBX    
+    PUSH EBX        
     MOV EBX, NODE_SIZE_BYTES
     XOR EDX, EDX 
     DIV EBX 
     CALL Heap_Insert 
+    POP EBX         
         
-    MOV BYTE PTR [NODE_MAP + EBP + NODE_FLAG], 1 
-    
-Main_AStar_Loop:
+    MOV BYTE PTR [NODE_MAP + EBX + NODE_FLAG], 1 
     CMP OPEN_LIST_COUNT, 0
     JE No_Path_Found
 
