@@ -1,6 +1,5 @@
 TITLE ghostPos Module
 
-.MODEL FLAT, STDCALL
 INCLUDE Irvine32.inc
 INCLUDE AIDataStruct.inc 
 
