@@ -348,6 +348,8 @@ A_Star_Search PROC NEAR USES EAX EBX ECX EDX ESI EDI EBP
     POP EBX         
         
     MOV BYTE PTR [NODE_MAP + EBX + NODE_FLAG], 1 
+
+Main_AStar_Loop:
     CMP OPEN_LIST_COUNT, 0
     JE No_Path_Found
 
