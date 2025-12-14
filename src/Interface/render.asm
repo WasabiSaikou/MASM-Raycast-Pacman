@@ -2,289 +2,431 @@ TITLE Raycasting Render Module
 
 INCLUDE Irvine32.inc
 
-; External C functions (C calling convention)
+; C functions for rendering only
 InitOpenGL PROTO C
 UpdateDisplay PROTO C
-DrawWallColumn PROTO C, column:DWORD, wallHeight:DWORD, wallType:DWORD, textureX:DWORD
+DrawWallColumn PROTO C, column:DWORD, wallHeight:DWORD, wallType:DWORD, brightness:DWORD
 DrawFloorCeiling PROTO C
+DrawHUD PROTO C, playerX:DWORD, playerY:DWORD, points:DWORD, lives:DWORD, gameState:DWORD
+DrawMinimap PROTO C, mazeMap:PTR BYTE, mazeSize:DWORD, playerX:DWORD, playerY:DWORD, ghostX:DWORD, ghostY:DWORD
 CloseRenderWindow PROTO C
 
-; External game data
-EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD
+EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD, point:DWORD
+EXTERN ghostX:DWORD, ghostY:DWORD
 EXTERN MazeMap:BYTE, N:DWORD
+EXTERN gameStateFlag:DWORD
 
 PUBLIC render
 PUBLIC InitRender
 PUBLIC CloseRender
 
 .DATA
-; Screen dimensions
-SCREEN_WIDTH  DWORD 640
-SCREEN_HEIGHT DWORD 480
-
-; Raycasting variables
-mapX DWORD ?
-mapY DWORD ?
-stepX SDWORD ?
-stepY SDWORD ?
-side DWORD ?
-perpWallDist DWORD ?
-lineHeight DWORD ?
-wallType DWORD ?
-
-; Constants
-MAX_DEPTH DWORD 32
+SCREEN_WIDTH  DWORD 800
+SCREEN_HEIGHT DWORD 600
+SCALE DWORD 10000  ; Fixed point scale for precision
 
 .CODE
 
-; Initialize the rendering system
 InitRender PROC
     INVOKE InitOpenGL
     RET
 InitRender ENDP
 
-; Cleanup rendering system
 CloseRender PROC
     INVOKE CloseRenderWindow
     RET
 CloseRender ENDP
 
-; Main rendering procedure (simplified raycaster)
-render PROC USES EAX EBX ECX EDX ESI EDI
-    LOCAL rayDirX:SDWORD, rayDirY:SDWORD
-    LOCAL cameraX:SDWORD
-    LOCAL column:DWORD
+; Helper: Integer square root approximation
+isqrt PROC uses EBX ECX EDX, value:DWORD
+    MOV EAX, value
+    MOV EBX, EAX
+    SHR EBX, 1
     
-    ; Draw floor and ceiling first
+    CMP EAX, 0
+    JE sqrt_zero
+    
+    MOV ECX, 10  ; Iterations
+sqrt_loop:
+    MOV EAX, value
+    XOR EDX, EDX
+    DIV EBX
+    ADD EAX, EBX
+    SHR EAX, 1
+    MOV EBX, EAX
+    LOOP sqrt_loop
+    
+    MOV EAX, EBX
+    RET
+    
+sqrt_zero:
+    XOR EAX, EAX
+    RET
+isqrt ENDP
+
+render PROC USES EBX ECX EDX ESI EDI
+    LOCAL column:DWORD
+    LOCAL rayDirX:SDWORD, rayDirY:SDWORD
+    LOCAL mapX:SDWORD, mapY:SDWORD
+    LOCAL deltaDistX:DWORD, deltaDistY:DWORD
+    LOCAL sideDistX:DWORD, sideDistY:DWORD
+    LOCAL stepX:SDWORD, stepY:SDWORD
+    LOCAL hit:DWORD, side:DWORD
+    LOCAL perpWallDist:DWORD
+    LOCAL lineHeight:DWORD
+    LOCAL cameraX:SDWORD
+    LOCAL dirX:SDWORD, dirY:SDWORD
+    LOCAL planeX:SDWORD, planeY:SDWORD
+    LOCAL posX:DWORD, posY:DWORD
+    LOCAL temp:DWORD
+    LOCAL brightness:DWORD
+    
     INVOKE DrawFloorCeiling
     
-    ; Get player direction (0=up, 1=right, 2=down, 3=left)
+    ; Player position (0-31 converted to 0.5-31.5 in fixed point)
+    MOV EAX, playerX
+    MOV EBX, SCALE
+    IMUL EBX
+    MOV EBX, SCALE
+    SHR EBX, 1
+    ADD EAX, EBX  ; Add 0.5
+    MOV posX, EAX
+    
+    MOV EAX, playerY
+    MOV EBX, SCALE
+    IMUL EBX
+    MOV EBX, SCALE
+    SHR EBX, 1
+    ADD EAX, EBX
+    MOV posY, EAX
+    
+    ; Set direction vectors based on player direction
     MOV EAX, dir
     AND EAX, 3
-    MOV ESI, EAX                  ; ESI = direction index
     
-    ; Set base direction vectors based on player direction
-    ; We'll calculate ray direction for each column
+    CMP EAX, 0
+    JE dir_north
+    CMP EAX, 1
+    JE dir_east
+    CMP EAX, 2
+    JE dir_south
+    JMP dir_west
     
-    ; Loop through each screen column
+dir_north:
+    MOV dirX, 0
+    MOV dirY, -10000
+    MOV planeX, 10000
+    MOV planeY, 0
+    JMP start_columns
+    
+dir_east:
+    MOV dirX, 10000
+    MOV dirY, 0
+    MOV planeX, 0
+    MOV planeY, 10000
+    JMP start_columns
+    
+dir_south:
+    MOV dirX, 0
+    MOV dirY, 10000
+    MOV planeX, -10000
+    MOV planeY, 0
+    JMP start_columns
+    
+dir_west:
+    MOV dirX, -10000
+    MOV dirY, 0
+    MOV planeX, 0
+    MOV planeY, -10000
+    
+start_columns:
     MOV column, 0
     
 column_loop:
     MOV EAX, column
-    MOV EBX, SCREEN_WIDTH
-    CMP EAX, EBX
+    CMP EAX, SCREEN_WIDTH
     JAE done_rendering
     
-    ; Calculate camera X (-1000 to +1000 range for fixed point)
-    ; cameraX = (2 * column / SCREEN_WIDTH) - 1
-    ; Using fixed point: (2000 * column / SCREEN_WIDTH) - 1000
+    ; Calculate cameraX: maps column 0..799 to -0.5..0.5 (in fixed point: -5000..5000)
     MOV EAX, column
-    MOV EBX, 2000
+    MOV EBX, 10000
+    IMUL EBX
     XOR EDX, EDX
-    MUL EBX                       ; EAX = column * 2000
-    MOV EBX, SCREEN_WIDTH
-    DIV EBX                       ; EAX = (column * 2000) / SCREEN_WIDTH
-    SUB EAX, 1000
-    MOV cameraX, EAX              ; cameraX ranges from -1000 to +1000
+    DIV SCREEN_WIDTH
+    SUB EAX, 5000
+    MOV cameraX, EAX
     
-    ; Calculate ray direction based on player direction
-    ; Simplified: we'll use direction + camera offset
-    CMP ESI, 0                    ; North (up)
-    JE ray_north
-    CMP ESI, 1                    ; East (right)
-    JE ray_east
-    CMP ESI, 2                    ; South (down)
-    JE ray_south
-    JMP ray_west                  ; West (left)
+    ; rayDirX = dirX + planeX * cameraX / 10000
+    MOV EAX, planeX
+    IMUL cameraX
+    MOV EBX, 10000
+    CDQ
+    IDIV EBX
+    ADD EAX, dirX
+    MOV rayDirX, EAX
     
-ray_north:
-    MOV EAX, cameraX
-    MOV rayDirX, EAX              ; Ray sweeps left-right
-    MOV rayDirY, -1000            ; Looking north (negative Y)
-    JMP setup_dda
+    ; rayDirY = dirY + planeY * cameraX / 10000
+    MOV EAX, planeY
+    IMUL cameraX
+    MOV EBX, 10000
+    CDQ
+    IDIV EBX
+    ADD EAX, dirY
+    MOV rayDirY, EAX
     
-ray_east:
-    MOV rayDirX, 1000             ; Looking east (positive X)
-    MOV EAX, cameraX
-    MOV rayDirY, EAX              ; Ray sweeps up-down
-    JMP setup_dda
-    
-ray_south:
-    MOV EAX, cameraX
-    NEG EAX
-    MOV rayDirX, EAX              ; Ray sweeps right-left
-    MOV rayDirY, 1000             ; Looking south (positive Y)
-    JMP setup_dda
-    
-ray_west:
-    MOV rayDirX, -1000            ; Looking west (negative X)
-    MOV EAX, cameraX
-    NEG EAX
-    MOV rayDirY, EAX              ; Ray sweeps down-up
-    
-setup_dda:
-    ; Setup DDA - simplified integer version
-    ; Start at player position
-    MOV EAX, playerX
+    ; Current map position
+    MOV EAX, posX
+    XOR EDX, EDX
+    DIV SCALE
     MOV mapX, EAX
-    MOV EAX, playerY
+    
+    MOV EAX, posY
+    XOR EDX, EDX
+    DIV SCALE
     MOV mapY, EAX
     
-    ; Determine step direction
+    ; Calculate deltaDistX = abs(SCALE / rayDirX)
     MOV EAX, rayDirX
     TEST EAX, EAX
-    JGE step_x_positive
-    MOV stepX, -1
-    JMP setup_step_y
-step_x_positive:
-    MOV stepX, 1
+    JZ raydir_x_zero
     
-setup_step_y:
+    MOV EBX, SCALE
+    IMUL EBX, SCALE
+    MOV temp, EBX
+    
+    MOV EAX, rayDirX
+    TEST EAX, EAX
+    JNS abs_rayx
+    NEG EAX
+abs_rayx:
+    MOV EBX, EAX
+    MOV EAX, temp
+    XOR EDX, EDX
+    DIV EBX
+    MOV deltaDistX, EAX
+    
+    ; stepX and sideDistX
+    CMP rayDirX, 0
+    JL raydir_x_neg
+    
+    MOV stepX, 1
+    MOV EAX, mapX
+    INC EAX
+    IMUL SCALE
+    SUB EAX, posX
+    IMUL deltaDistX
+    DIV SCALE
+    MOV sideDistX, EAX
+    JMP calc_y
+    
+raydir_x_neg:
+    MOV stepX, -1
+    MOV EAX, posX
+    MOV EBX, mapX
+    IMUL EBX, SCALE
+    SUB EAX, EBX
+    IMUL deltaDistX
+    DIV SCALE
+    MOV sideDistX, EAX
+    JMP calc_y
+    
+raydir_x_zero:
+    MOV deltaDistX, 7FFFFFFFH
+    MOV sideDistX, 7FFFFFFFH
+    MOV stepX, 0
+    
+calc_y:
     MOV EAX, rayDirY
     TEST EAX, EAX
-    JGE step_y_positive
-    MOV stepY, -1
-    JMP dda_init
-step_y_positive:
-    MOV stepY, 1
+    JZ raydir_y_zero
     
-dda_init:
-    ; DDA algorithm - step through grid
-    MOV wallType, 0
-    MOV ECX, MAX_DEPTH            ; Max ray depth
+    MOV EBX, SCALE
+    IMUL EBX, SCALE
+    MOV temp, EBX
+    
+    MOV EAX, rayDirY
+    TEST EAX, EAX
+    JNS abs_rayy
+    NEG EAX
+abs_rayy:
+    MOV EBX, EAX
+    MOV EAX, temp
+    XOR EDX, EDX
+    DIV EBX
+    MOV deltaDistY, EAX
+    
+    CMP rayDirY, 0
+    JL raydir_y_neg
+    
+    MOV stepY, 1
+    MOV EAX, mapY
+    INC EAX
+    IMUL SCALE
+    SUB EAX, posY
+    IMUL deltaDistY
+    DIV SCALE
+    MOV sideDistY, EAX
+    JMP dda_loop
+    
+raydir_y_neg:
+    MOV stepY, -1
+    MOV EAX, posY
+    MOV EBX, mapY
+    IMUL EBX, SCALE
+    SUB EAX, EBX
+    IMUL deltaDistY
+    DIV SCALE
+    MOV sideDistY, EAX
+    JMP dda_loop
+    
+raydir_y_zero:
+    MOV deltaDistY, 7FFFFFFFH
+    MOV sideDistY, 7FFFFFFFH
+    MOV stepY, 0
+    
+dda_loop:
+    MOV hit, 0
+    MOV ECX, 100
     
 dda_step:
-    ; Determine which direction to step
-    ; Simplified: alternate X and Y steps based on ray direction magnitude
-    MOV EAX, rayDirX
-    TEST EAX, EAX
-    JGE abs_ray_x
-    NEG EAX
-abs_ray_x:
-    MOV EBX, rayDirY
-    TEST EBX, EBX
-    JGE abs_ray_y
-    NEG EBX
-abs_ray_y:
+    ; Compare sideDist
+    MOV EAX, sideDistX
+    CMP EAX, sideDistY
+    JL step_x
     
-    ; If |rayDirX| > |rayDirY|, step in X more often
-    CMP EAX, EBX
-    JG step_in_x
-    
-step_in_y:
+    ; Step Y
+    MOV EAX, sideDistY
+    ADD EAX, deltaDistY
+    MOV sideDistY, EAX
+    MOV EAX, stepY
+    ADD mapY, EAX
     MOV side, 1
-    MOV EAX, mapY
-    ADD EAX, stepY
-    MOV mapY, EAX
     JMP check_hit
     
-step_in_x:
+step_x:
+    ; Step X
+    MOV EAX, sideDistX
+    ADD EAX, deltaDistX
+    MOV sideDistX, EAX
+    MOV EAX, stepX
+    ADD mapX, EAX
     MOV side, 0
-    MOV EAX, mapX
-    ADD EAX, stepX
-    MOV mapX, EAX
     
 check_hit:
-    ; Check bounds
+    ; Bounds check
     MOV EAX, mapX
-    CMP EAX, 1
-    JL hit_wall
-    MOV EBX, N
-    CMP EAX, EBX
-    JGE hit_wall
+    TEST EAX, EAX
+    JS wall_hit
+    CMP EAX, N
+    JAE wall_hit
     
     MOV EAX, mapY
-    CMP EAX, 1
-    JL hit_wall
-    MOV EBX, N
-    CMP EAX, EBX
-    JGE hit_wall
+    TEST EAX, EAX
+    JS wall_hit
+    CMP EAX, N
+    JAE wall_hit
     
-    ; Calculate array index: (mapY - 1) * N + (mapX - 1)
+    ; Check maze
     MOV EAX, mapY
-    DEC EAX
-    MOV EBX, N
-    XOR EDX, EDX
-    MUL EBX                       ; EAX = (mapY - 1) * N
-    MOV EBX, mapX
-    DEC EBX
-    ADD EAX, EBX                  ; EAX = index
+    IMUL N
+    ADD EAX, mapX
     
-    ; Get cell value
-    MOV EBX, OFFSET MazeMap
-    MOVZX EDX, BYTE PTR [EBX + EAX]
-    MOV wallType, EDX
+    LEA ESI, MazeMap
+    MOVZX EBX, BYTE PTR [ESI + EAX]
     
-    ; Check if wall (type 1)
-    CMP EDX, 1
-    JE hit_wall
+    CMP EBX, 1
+    JE wall_hit
     
-    ; Continue stepping
     DEC ECX
     JNZ dda_step
+    JMP no_wall
     
-    ; No wall found - use default
-    MOV wallType, 0
-    MOV perpWallDist, 1000
-    JMP calc_done
+wall_hit:
+    MOV hit, 1
     
-hit_wall:
-    ; Calculate distance (simplified)
-    ; Distance = difference in X or Y (depending on which side hit)
+no_wall:
+    ; Calculate perpendicular wall distance
     CMP side, 0
-    JE dist_x_side
+    JE calc_perp_x
     
-dist_y_side:
-    MOV EAX, mapY
-    MOV EBX, playerY
-    SUB EAX, EBX
-    JMP abs_dist
+    ; side == 1 (Y)
+    MOV EAX, sideDistY
+    SUB EAX, deltaDistY
+    MOV perpWallDist, EAX
+    JMP calc_height
     
-dist_x_side:
-    MOV EAX, mapX
-    MOV EBX, playerX
-    SUB EAX, EBX
-    
-abs_dist:
-    TEST EAX, EAX
-    JGE dist_positive
-    NEG EAX
-dist_positive:
-    CMP EAX, 0
-    JNE dist_ok
-    MOV EAX, 1                    ; Prevent division by zero
-dist_ok:
+calc_perp_x:
+    ; side == 0 (X)
+    MOV EAX, sideDistX
+    SUB EAX, deltaDistX
     MOV perpWallDist, EAX
     
-calc_done:
-    ; Calculate wall height
-    ; lineHeight = SCREEN_HEIGHT / distance
+calc_height:
+    ; lineHeight = SCREEN_HEIGHT * SCALE / perpWallDist
     MOV EAX, SCREEN_HEIGHT
+    IMUL SCALE
     XOR EDX, EDX
+    
     MOV EBX, perpWallDist
+    CMP EBX, 100
+    JGE perp_ok
+    MOV EBX, 100
+perp_ok:
     DIV EBX
     
-    ; Cap at screen height
-    MOV EBX, SCREEN_HEIGHT
-    CMP EAX, EBX
-    JLE height_valid
-    MOV EAX, EBX
-height_valid:
+    MOV EBX, 7
+    IMUL EBX
+    MOV EBX, 10
+    XOR EDX, EDX
+    DIV EBX
+
+    CMP EAX, 4000
+    JLE height_ok
+    MOV EAX, 4000
+height_ok:
     MOV lineHeight, EAX
     
-    ; Draw this column
-    MOV EAX, column
-    MOV EBX, lineHeight
-    MOV ECX, wallType
-    XOR EDX, EDX                  ; textureX = 0
+    ; Calculate brightness (distance-based shading)
+    ; brightness = 255 / (1 + dist^2 * 0.00001)
+    ; Approximate: brightness = 255 * 1000 / (1000 + dist/10)
+    MOV EAX, perpWallDist
+    MOV EBX, 10
+    XOR EDX, EDX
+    DIV EBX
+    ADD EAX, 1000
     
-    INVOKE DrawWallColumn, EAX, EBX, ECX, EDX
+    MOV EBX, EAX
+    MOV EAX, 255000
+    XOR EDX, EDX
+    DIV EBX
     
-    ; Next column
+    CMP EAX, 255
+    JLE bright_ok
+    MOV EAX, 255
+bright_ok:
+    
+    ; Darken one side for depth effect
+    CMP side, 1
+    JNE side_bright
+    SHR EAX, 1  ; Halve brightness for Y-sides
+side_bright:
+    MOV brightness, EAX
+    
+    ; Draw only if wall hit
+    CMP hit, 0
+    JE skip_draw
+    INVOKE DrawWallColumn, column, lineHeight, 1, brightness
+skip_draw:
+    
     INC column
     JMP column_loop
     
 done_rendering:
+    INVOKE DrawHUD, playerX, playerY, point, 3, gameStateFlag
+    
+    LEA EAX, MazeMap
+    INVOKE DrawMinimap, EAX, N, playerX, playerY, ghostX, ghostY
+    
     INVOKE UpdateDisplay
     
     RET

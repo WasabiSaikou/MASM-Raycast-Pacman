@@ -17,7 +17,7 @@ collisionGhost PROTO
 gameState PROTO
 maze PROTO
 
-render2D PROTO
+render PROTO
 InitRender PROTO
 
 EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD, inputCode:DWORD
@@ -117,7 +117,7 @@ trigger_reset:
 ;       ALWAYS Render Every Frame
 ; --------------------------------------
 render_frame:
-    call render2D
+    call render
     jmp main_loop
     
 main ENDP

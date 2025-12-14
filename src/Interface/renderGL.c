@@ -1,28 +1,85 @@
 #include <windows.h>
 #include <gl/gl.h>
-#include <gl/glu.h>
-#include <stdio.h>
-#include <string.h>
 
-// Window and OpenGL context
 static HWND hWnd = NULL;
 static HDC hDC = NULL;
 static HGLRC hRC = NULL;
-static int screenWidth = 640;
-static int screenHeight = 480;
+static int screenWidth = 800;
+static int screenHeight = 600;
 
-// Color palette for different wall types
 typedef struct {
     float r, g, b;
 } Color;
 
 static Color wallColors[] = {
-    {0.0f, 0.0f, 0.0f},      // Type 0: Black (empty/no wall)
-    {0.3f, 0.3f, 0.6f},      // Type 1: Blue-gray wall
-    {0.6f, 0.4f, 0.1f},      // Type 2: Orange (path with dots)
+    {0.0f, 0.0f, 0.0f},
+    {0.2f, 0.2f, 0.8f},
+    {0.1f, 0.5f, 0.1f},
+    {0.8f, 0.6f, 0.0f},
 };
 
-// Window procedure
+static void IntToStr(int num, char* str) {
+    int i = 0;
+    int isNegative = 0;
+    
+    if (num == 0) {
+        str[0] = '0';
+        str[1] = '\0';
+        return;
+    }
+    
+    if (num < 0) {
+        isNegative = 1;
+        num = -num;
+    }
+    
+    while (num > 0) {
+        str[i++] = (num % 10) + '0';
+        num /= 10;
+    }
+    
+    if (isNegative) {
+        str[i++] = '-';
+    }
+    
+    str[i] = '\0';
+    
+    int start = 0;
+    int end = i - 1;
+    while (start < end) {
+        char temp = str[start];
+        str[start] = str[end];
+        str[end] = temp;
+        start++;
+        end--;
+    }
+}
+
+static int StrLen(const char* str) {
+    int len = 0;
+    while (str[len] != '\0') len++;
+    return len;
+}
+
+static void StrCopy(char* dest, const char* src) {
+    int i = 0;
+    while (src[i] != '\0') {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+}
+
+static void StrCat(char* dest, const char* src) {
+    int destLen = StrLen(dest);
+    int i = 0;
+    while (src[i] != '\0') {
+        dest[destLen + i] = src[i];
+        i++;
+    }
+    dest[destLen + i] = '\0';
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
         case WM_CLOSE:
@@ -40,31 +97,27 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
     }
 }
 
-// Initialize OpenGL context and window
 int __cdecl InitOpenGL(void) {
     WNDCLASSEX wc;
     PIXELFORMATDESCRIPTOR pfd;
     int format;
     HINSTANCE hInstance = GetModuleHandle(NULL);
+    int i;
     
-    // Zero out structures
+    for (i = 0; i < sizeof(WNDCLASSEX); i++) {
+        ((char*)&wc)[i] = 0;
+    }
+    for (i = 0; i < sizeof(PIXELFORMATDESCRIPTOR); i++) {
+        ((char*)&pfd)[i] = 0;
+    }
+    
     wc.cbSize = sizeof(WNDCLASSEX);
     wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
     wc.lpfnWndProc = WndProc;
-    wc.cbClsExtra = 0;
-    wc.cbWndExtra = 0;
-    
-    // Register window class
-    wc.cbSize = sizeof(WNDCLASSEX);
-    wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-    wc.lpfnWndProc = WndProc;
-    wc.cbClsExtra = 0;
-    wc.cbWndExtra = 0;
     wc.hInstance = hInstance;
     wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-    wc.lpszMenuName = NULL;
     wc.lpszClassName = "RaycastPacman";
     wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
     
@@ -73,18 +126,14 @@ int __cdecl InitOpenGL(void) {
         return 0;
     }
     
-    // Create window with adjusted size for borders
-    RECT wr = {0, 0, screenWidth, screenHeight};
-    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
-    
     hWnd = CreateWindowEx(
         WS_EX_APPWINDOW,
         "RaycastPacman",
-        "MASM Raycast Pacman",
+        "MASM Raycast Pacman - 3D View",
         WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        wr.right - wr.left,
-        wr.bottom - wr.top,
+        100, 100,
+        screenWidth + 16,
+        screenHeight + 39,
         NULL, NULL,
         hInstance,
         NULL
@@ -100,14 +149,12 @@ int __cdecl InitOpenGL(void) {
     SetForegroundWindow(hWnd);
     SetFocus(hWnd);
     
-    // Get device context
     hDC = GetDC(hWnd);
     if (!hDC) {
-        MessageBox(NULL, "Failed to get device context!", "Error", MB_ICONEXCLAMATION | MB_OK);
+        MessageBox(NULL, "Failed to get DC!", "Error", MB_ICONEXCLAMATION | MB_OK);
         return 0;
     }
     
-    // Set pixel format
     pfd.nSize = sizeof(pfd);
     pfd.nVersion = 1;
     pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
@@ -117,29 +164,17 @@ int __cdecl InitOpenGL(void) {
     pfd.iLayerType = PFD_MAIN_PLANE;
     
     format = ChoosePixelFormat(hDC, &pfd);
-    if (!format) {
-        MessageBox(NULL, "Failed to choose pixel format!", "Error", MB_ICONEXCLAMATION | MB_OK);
-        return 0;
-    }
-    
-    if (!SetPixelFormat(hDC, format, &pfd)) {
+    if (!format || !SetPixelFormat(hDC, format, &pfd)) {
         MessageBox(NULL, "Failed to set pixel format!", "Error", MB_ICONEXCLAMATION | MB_OK);
         return 0;
     }
     
-    // Create OpenGL context
     hRC = wglCreateContext(hDC);
-    if (!hRC) {
-        MessageBox(NULL, "Failed to create OpenGL context!", "Error", MB_ICONEXCLAMATION | MB_OK);
+    if (!hRC || !wglMakeCurrent(hDC, hRC)) {
+        MessageBox(NULL, "Failed to create OpenGL!", "Error", MB_ICONEXCLAMATION | MB_OK);
         return 0;
     }
     
-    if (!wglMakeCurrent(hDC, hRC)) {
-        MessageBox(NULL, "Failed to activate OpenGL context!", "Error", MB_ICONEXCLAMATION | MB_OK);
-        return 0;
-    }
-    
-    // Set up OpenGL viewport
     glViewport(0, 0, screenWidth, screenHeight);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -147,18 +182,18 @@ int __cdecl InitOpenGL(void) {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     
-    // OpenGL settings
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glDisable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     return 1;
 }
 
-// Draw floor and ceiling
 void __cdecl DrawFloorCeiling(void) {
-    // Draw ceiling (dark blue-gray)
-    glColor3f(0.1f, 0.1f, 0.2f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    
+    glColor3f(0.05f, 0.05f, 0.15f);
     glBegin(GL_QUADS);
         glVertex2i(0, 0);
         glVertex2i(screenWidth, 0);
@@ -166,8 +201,7 @@ void __cdecl DrawFloorCeiling(void) {
         glVertex2i(0, screenHeight / 2);
     glEnd();
     
-    // Draw floor (darker gray)
-    glColor3f(0.2f, 0.2f, 0.2f);
+    glColor3f(0.15f, 0.12f, 0.1f);
     glBegin(GL_QUADS);
         glVertex2i(0, screenHeight / 2);
         glVertex2i(screenWidth, screenHeight / 2);
@@ -176,58 +210,180 @@ void __cdecl DrawFloorCeiling(void) {
     glEnd();
 }
 
-// Draw a single wall column
-void __cdecl DrawWallColumn(int column, int wallHeight, int wallType, int textureX) {
+void __cdecl DrawWallColumn(int column, int wallHeight, int wallType, int brightness) {
     int drawStart, drawEnd;
     Color color;
-    float shadeFactor = 1.0f;
+    float b = brightness / 255.0f;
     
-    // Validate inputs
-    if (column < 0 || column >= screenWidth) return;
-    if (wallHeight <= 0) return;
+    if (column < 0 || column >= screenWidth || wallHeight <= 0) return;
     
-    // Calculate drawing boundaries
     drawStart = (screenHeight - wallHeight) / 2;
     if (drawStart < 0) drawStart = 0;
     
     drawEnd = (screenHeight + wallHeight) / 2;
     if (drawEnd >= screenHeight) drawEnd = screenHeight - 1;
     
-    // Get wall color based on type
-    if (wallType >= 0 && wallType < sizeof(wallColors) / sizeof(Color)) {
+    if (wallType >= 0 && wallType < 4) {
         color = wallColors[wallType];
     } else {
-        color = wallColors[1]; // Default to wall color
+        color = wallColors[1];
     }
     
-    // Apply distance shading (darker = farther)
-    if (wallHeight < screenHeight / 8) {
-        shadeFactor = 0.3f;
-    } else if (wallHeight < screenHeight / 4) {
-        shadeFactor = 0.5f;
-    } else if (wallHeight < screenHeight / 2) {
-        shadeFactor = 0.7f;
-    }
-    
-    glColor3f(color.r * shadeFactor, color.g * shadeFactor, color.b * shadeFactor);
-    
-    // Draw vertical line for this column
-    glBegin(GL_LINES);
+    glBegin(GL_QUADS);
+        glColor3f(color.r * b, color.g * b, color.b * b);
         glVertex2i(column, drawStart);
+        glVertex2i(column + 1, drawStart);
+        glVertex2i(column + 1, drawEnd);
         glVertex2i(column, drawEnd);
     glEnd();
 }
 
-// Update the display (swap buffers, process events)
+void __cdecl DrawHUD(int playerX, int playerY, int points, int lives, int gameState) {
+    char buffer[128];
+    
+    glColor4f(0.0f, 0.0f, 0.0f, 0.6f);
+    glBegin(GL_QUADS);
+        glVertex2i(0, 0);
+        glVertex2i(screenWidth, 0);
+        glVertex2i(screenWidth, 40);
+        glVertex2i(0, 40);
+    glEnd();
+    
+    SetBkMode(hDC, TRANSPARENT);
+    SetTextColor(hDC, RGB(255, 255, 0));
+    
+    StrCopy(buffer, "SCORE: ");
+    if (points < 100) StrCat(buffer, "0");
+    if (points < 10) StrCat(buffer, "0");
+    {
+        char numStr[16];
+        IntToStr(points, numStr);
+        StrCat(buffer, numStr);
+    }
+    TextOutA(hDC, 10, 10, buffer, StrLen(buffer));
+    
+    StrCopy(buffer, "POS: (");
+    {
+        char numStr[16];
+        IntToStr(playerX, numStr);
+        StrCat(buffer, numStr);
+        StrCat(buffer, ", ");
+        IntToStr(playerY, numStr);
+        StrCat(buffer, numStr);
+        StrCat(buffer, ")");
+    }
+    TextOutA(hDC, 150, 10, buffer, StrLen(buffer));
+    
+    SetTextColor(hDC, RGB(150, 150, 150));
+    StrCopy(buffer, "Arrow Keys: Move | ESC: Quit");
+    TextOutA(hDC, screenWidth - 250, 10, buffer, StrLen(buffer));
+    
+    if (gameState == 3) {
+        SetTextColor(hDC, RGB(0, 255, 0));
+        StrCopy(buffer, "*** YOU WIN! *** Press any key...");
+        TextOutA(hDC, screenWidth / 2 - 140, screenHeight / 2, buffer, StrLen(buffer));
+    } else if (gameState == 4) {
+        SetTextColor(hDC, RGB(255, 0, 0));
+        StrCopy(buffer, "*** GAME OVER! *** Press any key...");
+        TextOutA(hDC, screenWidth / 2 - 150, screenHeight / 2, buffer, StrLen(buffer));
+    }
+    
+    glColor3f(1.0f, 1.0f, 0.0f);
+    {
+        int centerX = screenWidth / 2;
+        int centerY = screenHeight / 2;
+        glBegin(GL_LINES);
+            glVertex2i(centerX - 10, centerY);
+            glVertex2i(centerX + 10, centerY);
+            glVertex2i(centerX, centerY - 10);
+            glVertex2i(centerX, centerY + 10);
+        glEnd();
+    }
+}
+
+void __cdecl DrawMinimap(unsigned char* mazeMap, int mazeSize, int playerX, int playerY, int ghostX, int ghostY) {
+    int minimapSize = 150;
+    int minimapX = screenWidth - minimapSize - 10;
+    int minimapY = 50;
+    int cellSize = minimapSize / mazeSize;
+    int x, y;
+    
+    if (!mazeMap) return;
+    
+    glColor4f(0.0f, 0.0f, 0.0f, 0.7f);
+    glBegin(GL_QUADS);
+        glVertex2i(minimapX - 5, minimapY - 5);
+        glVertex2i(minimapX + minimapSize + 5, minimapY - 5);
+        glVertex2i(minimapX + minimapSize + 5, minimapY + minimapSize + 5);
+        glVertex2i(minimapX - 5, minimapY + minimapSize + 5);
+    glEnd();
+    
+    glColor3f(0.5f, 0.5f, 0.5f);
+    glBegin(GL_LINE_LOOP);
+        glVertex2i(minimapX - 5, minimapY - 5);
+        glVertex2i(minimapX + minimapSize + 5, minimapY - 5);
+        glVertex2i(minimapX + minimapSize + 5, minimapY + minimapSize + 5);
+        glVertex2i(minimapX - 5, minimapY + minimapSize + 5);
+    glEnd();
+    
+    for (y = 0; y < mazeSize; y++) {
+        for (x = 0; x < mazeSize; x++) {
+            int idx = y * mazeSize + x;
+            int cellType = mazeMap[idx];
+            int px = minimapX + x * cellSize;
+            int py = minimapY + y * cellSize;
+            
+            if (cellType == 1) {
+                glColor3f(0.3f, 0.3f, 0.9f);
+            } else if (cellType == 2) {
+                glColor3f(0.9f, 0.9f, 0.0f);
+            } else {
+                glColor3f(0.1f, 0.1f, 0.1f);
+            }
+            
+            glBegin(GL_QUADS);
+                glVertex2i(px, py);
+                glVertex2i(px + cellSize, py);
+                glVertex2i(px + cellSize, py + cellSize);
+                glVertex2i(px, py + cellSize);
+            glEnd();
+        }
+    }
+    
+    glColor3f(0.0f, 1.0f, 0.0f);
+    {
+        int px = minimapX + playerX * cellSize + cellSize / 2;
+        int py = minimapY + playerY * cellSize + cellSize / 2;
+        int psize = cellSize > 3 ? 3 : cellSize;
+        glBegin(GL_QUADS);
+            glVertex2i(px - psize, py - psize);
+            glVertex2i(px + psize, py - psize);
+            glVertex2i(px + psize, py + psize);
+            glVertex2i(px - psize, py + psize);
+        glEnd();
+    }
+    
+    glColor3f(1.0f, 0.0f, 0.0f);
+    {
+        int gx = minimapX + ghostX * cellSize + cellSize / 2;
+        int gy = minimapY + ghostY * cellSize + cellSize / 2;
+        int gsize = cellSize > 3 ? 3 : cellSize;
+        glBegin(GL_QUADS);
+            glVertex2i(gx - gsize, gy - gsize);
+            glVertex2i(gx + gsize, gy - gsize);
+            glVertex2i(gx + gsize, gy + gsize);
+            glVertex2i(gx - gsize, gy + gsize);
+        glEnd();
+    }
+}
+
 void __cdecl UpdateDisplay(void) {
     MSG msg;
     
-    // Swap buffers
     if (hDC) {
         SwapBuffers(hDC);
     }
     
-    // Process Windows messages (non-blocking)
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
         if (msg.message == WM_QUIT) {
             ExitProcess(0);
@@ -235,12 +391,8 @@ void __cdecl UpdateDisplay(void) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-    
-    // Clear for next frame
-    glClear(GL_COLOR_BUFFER_BIT);
 }
 
-// Cleanup
 void __cdecl CloseRenderWindow(void) {
     if (hRC) {
         wglMakeCurrent(NULL, NULL);
