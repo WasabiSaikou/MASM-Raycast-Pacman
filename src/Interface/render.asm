@@ -6,7 +6,8 @@ INCLUDE Irvine32.inc
 InitOpenGL PROTO C
 UpdateDisplay PROTO C
 DrawWallColumn PROTO C, column:DWORD, wallHeight:DWORD, wallType:DWORD, brightness:DWORD
-DrawFloorCeiling PROTO C
+DrawCeiling PROTO C
+DrawFloorPixel PROTO C, column:DWORD, y:DWORD, color:DWORD
 DrawHUD PROTO C, playerX:DWORD, playerY:DWORD, points:DWORD, lives:DWORD, gameState:DWORD
 DrawMinimap PROTO C, mazeMap:PTR BYTE, mazeSize:DWORD, playerX:DWORD, playerY:DWORD, ghostX:DWORD, ghostY:DWORD
 CloseRenderWindow PROTO C
@@ -24,6 +25,7 @@ PUBLIC CloseRender
 SCREEN_WIDTH  DWORD 800
 SCREEN_HEIGHT DWORD 600
 SCALE DWORD 10000  ; Fixed point scale for precision
+FLOOR_Y_START DWORD ?
 
 .CODE
 
@@ -81,7 +83,7 @@ render PROC USES EBX ECX EDX ESI EDI
     LOCAL temp:DWORD
     LOCAL brightness:DWORD
     
-    INVOKE DrawFloorCeiling
+    INVOKE DrawCeiling
     
     ; Player position (0-31 converted to 0.5-31.5 in fixed point)
     MOV EAX, playerX
@@ -374,12 +376,6 @@ calc_height:
 perp_ok:
     DIV EBX
     
-    MOV EBX, 7
-    IMUL EBX
-    MOV EBX, 10
-    XOR EDX, EDX
-    DIV EBX
-
     CMP EAX, 4000
     JLE height_ok
     MOV EAX, 4000
@@ -417,6 +413,127 @@ side_bright:
     JE skip_draw
     INVOKE DrawWallColumn, column, lineHeight, 1, brightness
 skip_draw:
+    
+    ; Calculate where floor starts (below the wall)
+    MOV EAX, SCREEN_HEIGHT
+    SUB EAX, lineHeight
+    SHR EAX, 1
+    ADD EAX, lineHeight
+    MOV FLOOR_Y_START, EAX
+    
+    ; Floor raycasting from wall bottom to screen bottom
+    MOV EDI, FLOOR_Y_START
+    CMP EDI, SCREEN_HEIGHT
+    JAE skip_floor_cast
+    
+floor_pixel_loop:
+    ; Calculate current distance from camera to floor point
+    ; p = screenHeight / (2.0 * y - screenHeight)
+    MOV EAX, EDI
+    SHL EAX, 1              ; 2 * y
+    SUB EAX, SCREEN_HEIGHT
+    CMP EAX, 0
+    JLE skip_floor_pixel
+    
+    MOV EBX, EAX
+    MOV EAX, SCREEN_HEIGHT
+    IMUL SCALE
+    XOR EDX, EDX
+    DIV EBX
+    MOV temp, EAX          ; temp = p (distance to floor point)
+    
+    ; Calculate floor position
+    ; floorX = posX + rayDirX * p
+    ; floorY = posY + rayDirY * p
+    MOV EAX, rayDirX
+    IMUL temp
+    MOV EBX, SCALE
+    CDQ
+    IDIV EBX
+    ADD EAX, posX
+    MOV EBX, EAX           ; floorX in fixed point
+    
+    MOV EAX, rayDirY
+    IMUL temp
+    MOV ECX, SCALE
+    CDQ
+    IDIV ECX
+    ADD EAX, posY
+    MOV ECX, EAX           ; floorY in fixed point
+    
+    ; Convert to map coordinates
+    MOV EAX, EBX
+    XOR EDX, EDX
+    DIV SCALE
+    MOV mapX, EAX          ; floor tile X
+    
+    MOV EAX, ECX
+    XOR EDX, EDX
+    DIV SCALE
+    MOV mapY, EAX          ; floor tile Y
+    
+    ; Check bounds
+    MOV EAX, mapX
+    TEST EAX, EAX
+    JS floor_black
+    CMP EAX, N
+    JAE floor_black
+    
+    MOV EAX, mapY
+    TEST EAX, EAX
+    JS floor_black
+    CMP EAX, N
+    JAE floor_black
+    
+    ; Check if ghost is on this tile (PRIORITY 1 - RED)
+    MOV EAX, mapX
+    CMP EAX, ghostX
+    JNE check_dots
+    MOV EAX, mapY
+    CMP EAX, ghostY
+    JNE check_dots
+    
+    ; Ghost tile - draw RED
+    INVOKE DrawFloorPixel, column, EDI, 0FF0000h  ; Red in 0xRRGGBB format
+    JMP next_floor_pixel
+    
+check_dots:
+    ; Get maze value
+    MOV EAX, mapY
+    IMUL N
+    ADD EAX, mapX
+    LEA ESI, MazeMap
+    MOVZX EBX, BYTE PTR [ESI + EAX]
+    
+    ; Check tile type
+    CMP EBX, 2
+    JE floor_yellow
+    CMP EBX, 0
+    JE floor_black
+    
+    ; Wall or unknown - draw black
+    JMP floor_black
+    
+floor_yellow:
+    ; Path with dots - draw YELLOW
+    INVOKE DrawFloorPixel, column, EDI, 0FFFF00h  ; Yellow
+    JMP next_floor_pixel
+    
+floor_black:
+    ; Empty path - draw BLACK
+    INVOKE DrawFloorPixel, column, EDI, 0000000h  ; Black
+    JMP next_floor_pixel
+    
+skip_floor_pixel:
+    ; If calculation error, draw black
+    INVOKE DrawFloorPixel, column, EDI, 0000000h
+    
+next_floor_pixel:
+    INC EDI
+    CMP EDI, SCREEN_HEIGHT
+    JL floor_pixel_loop
+    
+skip_floor_cast:
     
     INC column
     JMP column_loop

@@ -190,7 +190,7 @@ int __cdecl InitOpenGL(void) {
     return 1;
 }
 
-void __cdecl DrawFloorCeiling(void) {
+void __cdecl DrawCeiling(void) {
     glClear(GL_COLOR_BUFFER_BIT);
     
     glColor3f(0.05f, 0.05f, 0.15f);
@@ -199,14 +199,6 @@ void __cdecl DrawFloorCeiling(void) {
         glVertex2i(screenWidth, 0);
         glVertex2i(screenWidth, screenHeight / 2);
         glVertex2i(0, screenHeight / 2);
-    glEnd();
-    
-    glColor3f(0.15f, 0.12f, 0.1f);
-    glBegin(GL_QUADS);
-        glVertex2i(0, screenHeight / 2);
-        glVertex2i(screenWidth, screenHeight / 2);
-        glVertex2i(screenWidth, screenHeight);
-        glVertex2i(0, screenHeight);
     glEnd();
 }
 
@@ -235,6 +227,22 @@ void __cdecl DrawWallColumn(int column, int wallHeight, int wallType, int bright
         glVertex2i(column + 1, drawStart);
         glVertex2i(column + 1, drawEnd);
         glVertex2i(column, drawEnd);
+    glEnd();
+}
+
+void __cdecl DrawFloorPixel(int column, int y, int color) {
+    float r, g, b;
+    
+    if (column < 0 || column >= screenWidth) return;
+    if (y < 0 || y >= screenHeight) return;
+    
+    r = ((color >> 16) & 0xFF) / 255.0f;
+    g = ((color >> 8) & 0xFF) / 255.0f;
+    b = (color & 0xFF) / 255.0f;
+    
+    glBegin(GL_POINTS);
+        glColor3f(r, g, b);
+        glVertex2i(column, y);
     glEnd();
 }
 
