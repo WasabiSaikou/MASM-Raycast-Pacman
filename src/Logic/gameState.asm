@@ -22,8 +22,8 @@ gameOverMsg BYTE "GAME OVER",0
 gameWinMsg BYTE "YOU WIN", 0
 pressKeyMsg BYTE "PRESS ANY KEY TO START", 0
 
-; 0: playing, 1: win, 2: lose, 3: show win message, 4: show lose message, 5: reset game
-gameStateFlag DWORD 0       
+; 0: playing, 1: win, 2: lose, 3: show win message, 4: show lose message, 5: reset game, 6: start screen
+gameStateFlag DWORD 6       
 
 .code
 gameState PROC

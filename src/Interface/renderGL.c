@@ -6,6 +6,7 @@ static HDC hDC = NULL;
 static HGLRC hRC = NULL;
 static int screenWidth = 800;
 static int screenHeight = 600;
+static GLuint fontBase = 0;
 
 typedef struct {
     float r, g, b;
@@ -17,6 +18,31 @@ static Color wallColors[] = {
     {0.1f, 0.5f, 0.1f},
     {0.8f, 0.6f, 0.0f},
 };
+
+static int StrLen(const char* str) {
+    int len = 0;
+    while (str[len] != '\0') len++;
+    return len;
+}
+
+static void StrCopy(char* dest, const char* src) {
+    int i = 0;
+    while (src[i] != '\0') {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+}
+
+static void StrCat(char* dest, const char* src) {
+    int destLen = StrLen(dest);
+    int i = 0;
+    while (src[i] != '\0') {
+        dest[destLen + i] = src[i];
+        i++;
+    }
+    dest[destLen + i] = '\0';
+}
 
 static void IntToStr(int num, char* str) {
     int i = 0;
@@ -55,29 +81,43 @@ static void IntToStr(int num, char* str) {
     }
 }
 
-static int StrLen(const char* str) {
-    int len = 0;
-    while (str[len] != '\0') len++;
-    return len;
+static void BuildFont(HDC hDC) {
+    HFONT font;
+    HFONT oldFont;
+    
+    fontBase = glGenLists(256);
+    
+    font = CreateFont(
+        -24,                        
+        0,                          
+        0,                          
+        0,                          
+        FW_BOLD,                    
+        FALSE,                      
+        FALSE,                      
+        FALSE,                      
+        ANSI_CHARSET,               
+        OUT_TT_PRECIS,              
+        CLIP_DEFAULT_PRECIS,        
+        ANTIALIASED_QUALITY,        
+        FF_DONTCARE | DEFAULT_PITCH,
+        "Arial");                   
+    
+    oldFont = (HFONT)SelectObject(hDC, font);
+    wglUseFontBitmaps(hDC, 0, 256, fontBase);
+    SelectObject(hDC, oldFont);
+    DeleteObject(font);
 }
 
-static void StrCopy(char* dest, const char* src) {
-    int i = 0;
-    while (src[i] != '\0') {
-        dest[i] = src[i];
-        i++;
-    }
-    dest[i] = '\0';
-}
-
-static void StrCat(char* dest, const char* src) {
-    int destLen = StrLen(dest);
-    int i = 0;
-    while (src[i] != '\0') {
-        dest[destLen + i] = src[i];
-        i++;
-    }
-    dest[destLen + i] = '\0';
+static void RenderText(int x, int y, const char* text, float r, float g, float b) {
+    if (!text || !fontBase) return;
+    
+    glColor3f(r, g, b);
+    glRasterPos2i(x, y);
+    glPushAttrib(GL_LIST_BIT);
+    glListBase(fontBase);
+    glCallLists(StrLen(text), GL_UNSIGNED_BYTE, text);
+    glPopAttrib();
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -187,6 +227,9 @@ int __cdecl InitOpenGL(void) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
+    // Build bitmap font
+    BuildFont(hDC);
+    
     return 1;
 }
 
@@ -249,16 +292,13 @@ void __cdecl DrawFloorPixel(int column, int y, int color) {
 void __cdecl DrawHUD(int playerX, int playerY, int points, int lives, int gameState) {
     char buffer[128];
     
-    glColor4f(0.0f, 0.0f, 0.0f, 0.6f);
+    glColor4f(0.0f, 0.0f, 0.0f, 0.7f);
     glBegin(GL_QUADS);
         glVertex2i(0, 0);
         glVertex2i(screenWidth, 0);
-        glVertex2i(screenWidth, 40);
-        glVertex2i(0, 40);
+        glVertex2i(screenWidth, 50);
+        glVertex2i(0, 50);
     glEnd();
-    
-    SetBkMode(hDC, TRANSPARENT);
-    SetTextColor(hDC, RGB(255, 255, 0));
     
     StrCopy(buffer, "SCORE: ");
     if (points < 100) StrCat(buffer, "0");
@@ -268,7 +308,7 @@ void __cdecl DrawHUD(int playerX, int playerY, int points, int lives, int gameSt
         IntToStr(points, numStr);
         StrCat(buffer, numStr);
     }
-    TextOutA(hDC, 10, 10, buffer, StrLen(buffer));
+    RenderText(10, 30, buffer, 1.0f, 1.0f, 0.0f);
     
     StrCopy(buffer, "POS: (");
     {
@@ -280,32 +320,31 @@ void __cdecl DrawHUD(int playerX, int playerY, int points, int lives, int gameSt
         StrCat(buffer, numStr);
         StrCat(buffer, ")");
     }
-    TextOutA(hDC, 150, 10, buffer, StrLen(buffer));
+    RenderText(200, 30, buffer, 1.0f, 1.0f, 0.0f);
+    RenderText(screenWidth - 280, 30, "Arrow Keys | ESC: Quit", 0.6f, 0.6f, 0.6f);
     
-    SetTextColor(hDC, RGB(150, 150, 150));
-    StrCopy(buffer, "Arrow Keys: Move | ESC: Quit");
-    TextOutA(hDC, screenWidth - 250, 10, buffer, StrLen(buffer));
-    
-    if (gameState == 3) {
-        SetTextColor(hDC, RGB(0, 255, 0));
-        StrCopy(buffer, "*** YOU WIN! *** Press any key...");
-        TextOutA(hDC, screenWidth / 2 - 140, screenHeight / 2, buffer, StrLen(buffer));
-    } else if (gameState == 4) {
-        SetTextColor(hDC, RGB(255, 0, 0));
-        StrCopy(buffer, "*** GAME OVER! *** Press any key...");
-        TextOutA(hDC, screenWidth / 2 - 150, screenHeight / 2, buffer, StrLen(buffer));
+    if (gameState == 6) {  // Start screen
+        RenderText(screenWidth / 2 - 170, screenHeight / 2, "PRESS ANY KEY TO START", 0.0f, 1.0f, 1.0f);
+    } else if (gameState == 3) {  // Win screen
+        RenderText(screenWidth / 2 - 60, screenHeight / 2 - 20, "YOU WIN!", 0.0f, 1.0f, 0.0f);
+        RenderText(screenWidth / 2 - 150, screenHeight / 2 + 20, "Press any key to continue", 1.0f, 1.0f, 1.0f);
+    } else if (gameState == 4) {  // Game over screen
+        RenderText(screenWidth / 2 - 70, screenHeight / 2 - 20, "GAME OVER!", 1.0f, 0.0f, 0.0f);
+        RenderText(screenWidth / 2 - 150, screenHeight / 2 + 20, "Press any key to continue", 1.0f, 1.0f, 1.0f);
     }
     
-    glColor3f(1.0f, 1.0f, 0.0f);
-    {
-        int centerX = screenWidth / 2;
-        int centerY = screenHeight / 2;
-        glBegin(GL_LINES);
-            glVertex2i(centerX - 10, centerY);
-            glVertex2i(centerX + 10, centerY);
-            glVertex2i(centerX, centerY - 10);
-            glVertex2i(centerX, centerY + 10);
-        glEnd();
+    if (gameState == 0) {
+        glColor3f(1.0f, 1.0f, 0.0f);
+        {
+            int centerX = screenWidth / 2;
+            int centerY = screenHeight / 2;
+            glBegin(GL_LINES);
+                glVertex2i(centerX - 10, centerY);
+                glVertex2i(centerX + 10, centerY);
+                glVertex2i(centerX, centerY - 10);
+                glVertex2i(centerX, centerY + 10);
+            glEnd();
+        }
     }
 }
 
@@ -402,6 +441,10 @@ void __cdecl UpdateDisplay(void) {
 }
 
 void __cdecl CloseRenderWindow(void) {
+    if (fontBase) {
+        glDeleteLists(fontBase, 256);
+        fontBase = 0;
+    }
     if (hRC) {
         wglMakeCurrent(NULL, NULL);
         wglDeleteContext(hRC);

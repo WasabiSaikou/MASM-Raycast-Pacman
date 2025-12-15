@@ -63,6 +63,8 @@ main_loop:
 ;       Game Logic Update
 ; --------------------------------------
     mov eax, gameStateFlag
+    cmp eax, 6
+    je check_start_input
     cmp eax, 5
     je do_reset
     cmp eax, 3
@@ -70,6 +72,15 @@ main_loop:
     cmp eax, 4
     je check_lose_input
     jmp do_game_update
+
+check_start_input:
+    call InputModule
+    mov eax, inputCode
+    cmp eax, 0
+    je render_frame
+    
+    mov gameStateFlag, 5
+    jmp render_frame
 
 check_win_input:
 check_lose_input:
