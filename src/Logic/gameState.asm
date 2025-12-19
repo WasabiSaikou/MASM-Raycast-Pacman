@@ -6,11 +6,7 @@ PUBLIC point, gameStateFlag
 PUBLIC gameState
 PUBLIC gameOverMsg, gameWinMsg, pressKeyMsg
 
-EXTERN playerX:DWORD, playerY:DWORD, dir:DWORD
-EXTERN prevX:DWORD, prevY:DWORD
-EXTERN ghostX:DWORD, ghostY:DWORD
 EXTERN inputCode:DWORD
-EXTERN tickMs:DWORD
 
 resetMaze PROTO
 PlayerReset PROTO
