@@ -4,7 +4,7 @@ INCLUDE Irvine32.inc
 
 main          EQU start@0
 
-GetTickCount PROTO
+GetTickCount PROTO 
 
 InputModule PROTO
 PlayerPos PROTO
@@ -28,10 +28,10 @@ EXTERN gameStateFlag:DWORD
 PUBLIC tickMs
 
 .data
-tickMs   DWORD 100
-lastTick DWORD 0
-nowTime  DWORD 0
-elapsed  DWORD 0
+tickMs   DWORD 100   ; update interval
+lastTick DWORD 0     ; last update time
+nowTime  DWORD 0     ; current time
+elapsed  DWORD 0     ; nowTime - lastTick
 
 .code
 
